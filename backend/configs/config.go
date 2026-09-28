@@ -1,43 +1,43 @@
 package configs
 
 import (
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/joho/godotenv"
 )
 
 type Config struct {
-	AppPort     string
-	DatabaseURL string
-	JWTSecret   string
+	DBHost     string
+	DBPort     string
+	DBUser     string
+	DBPassword string
+	DBName     string
+	ServerPort string
+	JWTSecret  string
 }
 
-func LoadConfig() *Config {
-	// Load .env file if present (ignored in production where env vars are set directly)
-	if err := godotenv.Load(); err != nil {
-		log.Println("no .env file found, using system environment variables")
+func Load() *Config {
+	_ = godotenv.Load()
+	return &Config{
+		DBHost:     getEnv("DB_HOST", "localhost"),
+		DBPort:     getEnv("DB_PORT", "5432"),
+		DBUser:     getEnv("DB_USER", "eval_user"),
+		DBPassword: getEnv("DB_PASSWORD", ""),
+		DBName:     getEnv("DB_NAME", "eval_db"),
+		ServerPort: getEnv("PORT", "8080"),
+		JWTSecret:  getEnv("JWT_SECRET", "dev-secret-change-me"),
 	}
+}
 
-	cfg := &Config{
-		AppPort:     getEnv("APP_PORT", "8080"),
-		DatabaseURL: getEnv("DATABASE_URL", ""),
-		JWTSecret:   getEnv("JWT_SECRET", ""),
-	}
-
-	if cfg.DatabaseURL == "" {
-		log.Fatal("DATABASE_URL is required in .env")
-	}
-	if cfg.JWTSecret == "" {
-		log.Fatal("JWT_SECRET is required in .env")
-	}
-
-	return cfg
+func (c *Config) DSN() string {
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		c.DBUser, c.DBPassword, c.DBHost, c.DBPort, c.DBName)
 }
 
 func getEnv(key, fallback string) string {
-	if value, ok := os.LookupEnv(key); ok {
-		return value
+	if v := os.Getenv(key); v != "" {
+		return v
 	}
 	return fallback
 }

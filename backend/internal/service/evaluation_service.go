@@ -1,0 +1,159 @@
+package service
+
+import (
+	"time"
+
+	"performance/backend/internal/domain"
+)
+
+type ScoreInput struct {
+	CriteriaID uint
+	Score      int
+	Comment    string
+}
+
+type CreateEvaluationInput struct {
+	CycleID    uint
+	EmployeeID uint
+	Comment    string
+	Scores     []ScoreInput
+}
+
+type EvaluationService struct {
+	evals domain.EvaluationRepository
+	users domain.UserRepository
+}
+
+func NewEvaluationService(evals domain.EvaluationRepository, users domain.UserRepository) *EvaluationService {
+	return &EvaluationService{evals: evals, users: users}
+}
+
+// ---- Cycle / Criteria ----
+func (s *EvaluationService) CreateCycle(c *domain.EvaluationCycle) error {
+	c.Status = domain.CycleStatusOpen
+	return s.evals.CreateCycle(c)
+}
+func (s *EvaluationService) ListCycles() ([]domain.EvaluationCycle, error) {
+	return s.evals.ListCycles()
+}
+func (s *EvaluationService) CreateCriteria(c *domain.Criteria) error {
+	c.IsActive = true
+	return s.evals.CreateCriteria(c)
+}
+func (s *EvaluationService) ListCriteria() ([]domain.Criteria, error) {
+	return s.evals.ListCriteria()
+}
+
+// ---- Evaluation ----
+func (s *EvaluationService) Create(evaluatorID uint, role domain.Role, in CreateEvaluationInput) (*domain.Evaluation, error) {
+	cycle, err := s.evals.GetCycle(in.CycleID)
+	if err != nil {
+		return nil, err
+	}
+	if cycle.Status != domain.CycleStatusOpen {
+		return nil, domain.ErrInvalidInput
+	}
+
+	employee, err := s.users.GetByID(in.EmployeeID)
+	if err != nil {
+		return nil, err
+	}
+	// manager ประเมินได้เฉพาะลูกทีมของตัวเอง
+	if role == domain.RoleManager && (employee.ManagerID == nil || *employee.ManagerID != evaluatorID) {
+		return nil, domain.ErrForbidden
+	}
+	if evaluatorID == in.EmployeeID {
+		return nil, domain.ErrForbidden // ห้ามประเมินตัวเอง
+	}
+
+	if exists, err := s.evals.ExistsFor(in.CycleID, in.EmployeeID); err != nil {
+		return nil, err
+	} else if exists {
+		return nil, domain.ErrConflict
+	}
+
+	criteria, err := s.evals.ListCriteria()
+	if err != nil {
+		return nil, err
+	}
+	weights := make(map[uint]float64, len(criteria))
+	for _, c := range criteria {
+		weights[c.ID] = c.Weight
+	}
+	if len(in.Scores) != len(criteria) {
+		return nil, domain.ErrInvalidInput // ต้องให้คะแนนครบทุกเกณฑ์
+	}
+
+	var weighted, totalWeight float64
+	scores := make([]domain.EvaluationScore, 0, len(in.Scores))
+	seen := map[uint]bool{}
+	for _, sc := range in.Scores {
+		w, ok := weights[sc.CriteriaID]
+		if !ok || seen[sc.CriteriaID] || sc.Score < 1 || sc.Score > 5 {
+			return nil, domain.ErrInvalidInput
+		}
+		seen[sc.CriteriaID] = true
+		weighted += float64(sc.Score) * w
+		totalWeight += w
+		scores = append(scores, domain.EvaluationScore{CriteriaID: sc.CriteriaID, Score: sc.Score, Comment: sc.Comment})
+	}
+
+	e := &domain.Evaluation{
+		CycleID: in.CycleID, EmployeeID: in.EmployeeID, EvaluatorID: evaluatorID,
+		Status: domain.EvalStatusDraft, Comment: in.Comment, Scores: scores,
+	}
+	if totalWeight > 0 {
+		e.TotalScore = weighted / totalWeight
+	}
+	if err := s.evals.CreateEvaluation(e); err != nil {
+		return nil, err
+	}
+	return e, nil
+}
+
+func (s *EvaluationService) Submit(id, evaluatorID uint, role domain.Role) (*domain.Evaluation, error) {
+	e, err := s.evals.GetEvaluation(id)
+	if err != nil {
+		return nil, err
+	}
+	if role != domain.RoleAdmin && e.EvaluatorID != evaluatorID {
+		return nil, domain.ErrForbidden
+	}
+	if e.Status == domain.EvalStatusSubmitted {
+		return nil, domain.ErrConflict
+	}
+	now := time.Now()
+	e.Status = domain.EvalStatusSubmitted
+	e.SubmittedAt = &now
+	if err := s.evals.UpdateEvaluation(e); err != nil {
+		return nil, err
+	}
+	return e, nil
+}
+
+func (s *EvaluationService) Get(id, userID uint, role domain.Role) (*domain.Evaluation, error) {
+	e, err := s.evals.GetEvaluation(id)
+	if err != nil {
+		return nil, err
+	}
+	switch role {
+	case domain.RoleAdmin:
+	case domain.RoleManager:
+		if e.EvaluatorID != userID && e.EmployeeID != userID {
+			return nil, domain.ErrForbidden
+		}
+	default:
+		if e.EmployeeID != userID || e.Status != domain.EvalStatusSubmitted {
+			return nil, domain.ErrForbidden
+		}
+	}
+	return e, nil
+}
+
+func (s *EvaluationService) ListMine(employeeID uint) ([]domain.Evaluation, error) {
+	return s.evals.ListByEmployee(employeeID)
+}
+
+func (s *EvaluationService) ListGiven(evaluatorID uint) ([]domain.Evaluation, error) {
+	return s.evals.ListByEvaluator(evaluatorID)
+}

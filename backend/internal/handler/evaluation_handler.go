@@ -1,0 +1,160 @@
+package handler
+
+import (
+	"strconv"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"performance/backend/internal/domain"
+	"performance/backend/internal/middleware"
+	"performance/backend/internal/pkg/response"
+	"performance/backend/internal/service"
+)
+
+type EvaluationHandler struct{ svc *service.EvaluationService }
+
+func NewEvaluationHandler(s *service.EvaluationService) *EvaluationHandler {
+	return &EvaluationHandler{svc: s}
+}
+
+// ---- Cycle ----
+type createCycleRequest struct {
+	Name      string    `json:"name" binding:"required"`
+	StartDate time.Time `json:"start_date" binding:"required"`
+	EndDate   time.Time `json:"end_date" binding:"required"`
+}
+
+func (h *EvaluationHandler) CreateCycle(c *gin.Context) {
+	var req createCycleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+	cycle := &domain.EvaluationCycle{Name: req.Name, StartDate: req.StartDate, EndDate: req.EndDate}
+	if err := h.svc.CreateCycle(cycle); err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Created(c, cycle)
+}
+
+func (h *EvaluationHandler) ListCycles(c *gin.Context) {
+	out, err := h.svc.ListCycles()
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, out)
+}
+
+// ---- Criteria ----
+type createCriteriaRequest struct {
+	Name        string  `json:"name" binding:"required"`
+	Description string  `json:"description"`
+	Weight      float64 `json:"weight" binding:"required,gt=0"`
+}
+
+func (h *EvaluationHandler) CreateCriteria(c *gin.Context) {
+	var req createCriteriaRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+	cr := &domain.Criteria{Name: req.Name, Description: req.Description, Weight: req.Weight}
+	if err := h.svc.CreateCriteria(cr); err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Created(c, cr)
+}
+
+func (h *EvaluationHandler) ListCriteria(c *gin.Context) {
+	out, err := h.svc.ListCriteria()
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, out)
+}
+
+// ---- Evaluation ----
+type scoreRequest struct {
+	CriteriaID uint   `json:"criteria_id" binding:"required"`
+	Score      int    `json:"score" binding:"required,min=1,max=5"`
+	Comment    string `json:"comment"`
+}
+
+type createEvaluationRequest struct {
+	CycleID    uint           `json:"cycle_id" binding:"required"`
+	EmployeeID uint           `json:"employee_id" binding:"required"`
+	Comment    string         `json:"comment"`
+	Scores     []scoreRequest `json:"scores" binding:"required,min=1,dive"`
+}
+
+func (h *EvaluationHandler) Create(c *gin.Context) {
+	var req createEvaluationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+	scores := make([]service.ScoreInput, 0, len(req.Scores))
+	for _, s := range req.Scores {
+		scores = append(scores, service.ScoreInput{CriteriaID: s.CriteriaID, Score: s.Score, Comment: s.Comment})
+	}
+	e, err := h.svc.Create(middleware.UserID(c), middleware.UserRole(c), service.CreateEvaluationInput{
+		CycleID: req.CycleID, EmployeeID: req.EmployeeID, Comment: req.Comment, Scores: scores,
+	})
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.Created(c, e)
+}
+
+func (h *EvaluationHandler) Submit(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+	e, err := h.svc.Submit(uint(id), middleware.UserID(c), middleware.UserRole(c))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, e)
+}
+
+func (h *EvaluationHandler) Get(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+	e, err := h.svc.Get(uint(id), middleware.UserID(c), middleware.UserRole(c))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, e)
+}
+
+// ผลประเมินของฉัน (เห็นเฉพาะที่ submit แล้ว)
+func (h *EvaluationHandler) ListMine(c *gin.Context) {
+	out, err := h.svc.ListMine(middleware.UserID(c))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, out)
+}
+
+// ที่ฉันเป็นผู้ประเมิน
+func (h *EvaluationHandler) ListGiven(c *gin.Context) {
+	out, err := h.svc.ListGiven(middleware.UserID(c))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, out)
+}
