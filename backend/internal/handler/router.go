@@ -21,15 +21,15 @@ func SetupRouter(jwtSecret string, auth *AuthHandler, user *UserHandler, eval *E
 		authed.GET("/me", auth.Me)
 
 		// users
-		authed.POST("/users", middleware.RequireRoles(domain.RoleAdmin), user.Create)
-		authed.GET("/users", middleware.RequireRoles(domain.RoleAdmin), user.List)
+		authed.POST("/users", middleware.RequireRoles(domain.RoleAdmin, domain.RoleHR), user.Create)
+		authed.GET("/users", middleware.RequireRoles(domain.RoleAdmin, domain.RoleHR), user.List)
 		authed.GET("/team", middleware.RequireRoles(domain.RoleManager, domain.RoleAdmin), user.Team)
 
 		// cycles & criteria
 		authed.GET("/cycles", eval.ListCycles)
-		authed.POST("/cycles", middleware.RequireRoles(domain.RoleAdmin), eval.CreateCycle)
+		authed.POST("/cycles", middleware.RequireRoles(domain.RoleAdmin, domain.RoleHR), eval.CreateCycle)
 		authed.GET("/criteria", eval.ListCriteria)
-		authed.POST("/criteria", middleware.RequireRoles(domain.RoleAdmin), eval.CreateCriteria)
+		authed.POST("/criteria", middleware.RequireRoles(domain.RoleAdmin, domain.RoleHR, domain.RoleManager), eval.CreateCriteria)
 
 		// evaluations
 		mgr := middleware.RequireRoles(domain.RoleManager, domain.RoleAdmin)
