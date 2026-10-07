@@ -40,6 +40,10 @@ func SetupRouter(jwtSecret string, auth *AuthHandler, user *UserHandler, eval *E
 		authed.POST("/evaluations/:id/submit", eval.Submit)
 		authed.POST("/evaluations/:id/approve", mgr, eval.Approve)
 		authed.POST("/evaluations/:id/feedback", eval.AddFeedback)
+
+		// role-specific route groups (แก้ในไฟล์ router_*.go ของแต่ละคน)
+		registerAccountingRoutes(authed)
+		registerExecutiveRoutes(authed)
 	}
 	return r
 }

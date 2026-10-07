@@ -1,18 +1,11 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { NAV_ITEMS } from "../config/navigation";
 
 export default function Layout() {
   const { user, logout } = useAuth();
 
-  const links = [
-    { to: "/", label: "หน้าหลัก", roles: ["admin", "manager", "employee"] },
-    { to: "/evaluations", label: "งานประเมิน", roles: ["admin", "manager", "employee"] },
-    { to: "/users", label: "ผู้ใช้งาน", roles: ["admin"] },
-    { to: "/cycles", label: "รอบประเมิน", roles: ["admin"] },
-    { to: "/criteria", label: "เกณฑ์ประเมิน", roles: ["admin"] },
-  ];
-
-  const visibleLinks = links.filter((l) => user && l.roles.includes(user.role));
+  const visibleLinks = NAV_ITEMS.filter((l) => user && l.roles.includes(user.role));
 
   return (
     <div className="app-shell">
