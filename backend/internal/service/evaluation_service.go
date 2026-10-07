@@ -137,7 +137,7 @@ func (s *EvaluationService) Submit(id, evaluatorID uint, role domain.Role) (*dom
 	if role != domain.RoleHR && e.EvaluatorID != evaluatorID {
 		return nil, domain.ErrForbidden
 	}
-	if e.Status == domain.EvalStatusSubmitted {
+	if e.Status != domain.EvalStatusDraft {
 		return nil, domain.ErrConflict
 	}
 	now := time.Now()
@@ -156,6 +156,15 @@ func (s *EvaluationService) Approve(id, approverID uint, role domain.Role) (*dom
 	}
 	if role != domain.RoleHR && role != domain.RoleManager {
 		return nil, domain.ErrForbidden
+	}
+	if role == domain.RoleManager {
+		emp, err := s.users.GetByID(e.EmployeeID)
+		if err != nil {
+			return nil, err
+		}
+		if emp.ManagerID == nil || *emp.ManagerID != approverID {
+			return nil, domain.ErrForbidden
+		}
 	}
 	if e.Status != domain.EvalStatusSubmitted {
 		return nil, domain.ErrConflict
@@ -202,9 +211,9 @@ func (s *EvaluationService) Get(id, userID uint, role domain.Role) (*domain.Eval
 		if e.EvaluatorID != userID && e.EmployeeID != userID {
 			return nil, domain.ErrForbidden
 		}
-	default:
-		if e.EmployeeID != userID || e.Status != domain.EvalStatusSubmitted {
-			return nil, domain.ErrForbidden
+default:
+	if e.EmployeeID != userID || (e.Status != domain.EvalStatusSubmitted && e.Status != domain.EvalStatusApproved) {
+		return nil, domain.ErrForbidden
 		}
 	}
 	return e, nil
