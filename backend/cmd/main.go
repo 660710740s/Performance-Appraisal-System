@@ -25,21 +25,24 @@ func main() {
 	userRepo := repository.NewUserRepository(db)
 	evalRepo := repository.NewEvaluationRepository(db)
 	accRepo := repository.NewAccountingRepository(db)
+	reportRepo := repository.NewReportRepository(db)
 
 	// services
 	authSvc := service.NewAuthService(userRepo, cfg.JWTSecret, 24*time.Hour)
 	userSvc := service.NewUserService(userRepo)
 	evalSvc := service.NewEvaluationService(evalRepo, userRepo)
 	accSvc := service.NewAccountingService(accRepo, evalRepo, userRepo)
+	reportSvc := service.NewReportService(reportRepo, evalRepo, accRepo)
 
 	// handlers
 	authHandler := handler.NewAuthHandler(authSvc, userSvc)
 	userHandler := handler.NewUserHandler(userSvc)
 	evalHandler := handler.NewEvaluationHandler(evalSvc)
 	accHandler := handler.NewAccountingHandler(accSvc)
+	reportHandler := handler.NewReportHandler(reportSvc)
 
 	// router
-	r := handler.SetupRouter(cfg.JWTSecret, authHandler, userHandler, evalHandler, accHandler)
+	r := handler.SetupRouter(cfg.JWTSecret, authHandler, userHandler, evalHandler, accHandler, reportHandler)
 
 	log.Printf("server running on :%s", cfg.ServerPort)
 	if err := r.Run(":" + cfg.ServerPort); err != nil {

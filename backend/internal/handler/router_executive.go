@@ -6,11 +6,10 @@ import (
 	"performance/backend/internal/middleware"
 )
 
-// คนทำ Executive/Report: แทนที่ notImplemented ด้วย handler จริงในไฟล์นี้
-func registerExecutiveRoutes(authed *gin.RouterGroup) {
+func registerExecutiveRoutes(authed *gin.RouterGroup, h *ReportHandler) {
 	exec := authed.Group("/executive", middleware.RequireRoles(domain.RoleExecutive))
-	exec.GET("/summary", notImplemented)
+	exec.GET("/summary", h.Summary)
 
 	authed.GET("/reports/summary",
-		middleware.RequireRoles(domain.RoleHR, domain.RoleExecutive), notImplemented)
+		middleware.RequireRoles(domain.RoleHR, domain.RoleExecutive), h.Summary)
 }
