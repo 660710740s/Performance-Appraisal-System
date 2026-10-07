@@ -17,7 +17,7 @@ type createUserRequest struct {
 	Name         string      `json:"name" binding:"required"`
 	Email        string      `json:"email" binding:"required,email"`
 	Password     string      `json:"password" binding:"required,min=8"`
-	Role         domain.Role `json:"role" binding:"required,oneof=admin hr manager employee accounting executive"`
+	Role         domain.Role `json:"role" binding:"required,oneof=hr manager employee accounting executive"`
 	Department   string      `json:"department"`
 	Position     string      `json:"position"`
 	ManagerID    *uint       `json:"manager_id"`

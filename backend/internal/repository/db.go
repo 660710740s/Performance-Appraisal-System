@@ -31,6 +31,7 @@ func NewDB(dsn string) (*gorm.DB, error) {
                 &domain.Criteria{},
                 &domain.Evaluation{},
                 &domain.EvaluationScore{},
+		&domain.AuditLog{},
         ); err != nil {
                 return nil, err
         }

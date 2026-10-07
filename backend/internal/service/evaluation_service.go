@@ -15,6 +15,7 @@ type ScoreInput struct {
 type CreateEvaluationInput struct {
 	CycleID    uint
 	EmployeeID uint
+	Type       string
 	Comment    string
 	Scores     []ScoreInput
 }
@@ -58,15 +59,28 @@ func (s *EvaluationService) Create(evaluatorID uint, role domain.Role, in Create
 	if err != nil {
 		return nil, err
 	}
-	// manager ประเมินได้เฉพาะลูกทีมของตัวเอง
-	if role == domain.RoleManager && (employee.ManagerID == nil || *employee.ManagerID != evaluatorID) {
-		return nil, domain.ErrForbidden
-	}
-	if evaluatorID == in.EmployeeID {
-		return nil, domain.ErrForbidden // ห้ามประเมินตัวเอง
+
+	evalType := in.Type
+	if evalType == "" {
+		evalType = domain.EvalTypeSupervisor
 	}
 
-	if exists, err := s.evals.ExistsFor(in.CycleID, in.EmployeeID); err != nil {
+	if evalType == domain.EvalTypeSelf {
+		// self-evaluation: ต้องประเมินตัวเองเท่านั้น
+		if evaluatorID != in.EmployeeID {
+			return nil, domain.ErrForbidden
+		}
+	} else {
+		// supervisor-evaluation: ห้ามประเมินตัวเอง, manager ประเมินได้เฉพาะลูกทีมของตัวเอง
+		if evaluatorID == in.EmployeeID {
+			return nil, domain.ErrForbidden
+		}
+		if role == domain.RoleManager && (employee.ManagerID == nil || *employee.ManagerID != evaluatorID) {
+			return nil, domain.ErrForbidden
+		}
+	}
+
+	if exists, err := s.evals.ExistsFor(in.CycleID, in.EmployeeID, evalType); err != nil {
 		return nil, err
 	} else if exists {
 		return nil, domain.ErrConflict
@@ -99,7 +113,7 @@ func (s *EvaluationService) Create(evaluatorID uint, role domain.Role, in Create
 	}
 
 	e := &domain.Evaluation{
-		CycleID: in.CycleID, EmployeeID: in.EmployeeID, EvaluatorID: evaluatorID,
+		CycleID: in.CycleID, EmployeeID: in.EmployeeID, EvaluatorID: evaluatorID, Type: evalType,
 		Status: domain.EvalStatusDraft, Comment: in.Comment, Scores: scores,
 	}
 	if totalWeight > 0 {
@@ -108,6 +122,10 @@ func (s *EvaluationService) Create(evaluatorID uint, role domain.Role, in Create
 	if err := s.evals.CreateEvaluation(e); err != nil {
 		return nil, err
 	}
+	s.evals.CreateAuditLog(&domain.AuditLog{
+		UserID: evaluatorID, Action: "create", Entity: "evaluation", EntityID: e.ID,
+		Detail: "สร้างแบบประเมิน type=" + evalType,
+	})
 	return e, nil
 }
 
@@ -116,7 +134,7 @@ func (s *EvaluationService) Submit(id, evaluatorID uint, role domain.Role) (*dom
 	if err != nil {
 		return nil, err
 	}
-	if role != domain.RoleAdmin && e.EvaluatorID != evaluatorID {
+	if role != domain.RoleHR && e.EvaluatorID != evaluatorID {
 		return nil, domain.ErrForbidden
 	}
 	if e.Status == domain.EvalStatusSubmitted {
@@ -131,13 +149,55 @@ func (s *EvaluationService) Submit(id, evaluatorID uint, role domain.Role) (*dom
 	return e, nil
 }
 
+func (s *EvaluationService) Approve(id, approverID uint, role domain.Role) (*domain.Evaluation, error) {
+	e, err := s.evals.GetEvaluation(id)
+	if err != nil {
+		return nil, err
+	}
+	if role != domain.RoleHR && role != domain.RoleManager {
+		return nil, domain.ErrForbidden
+	}
+	if e.Status != domain.EvalStatusSubmitted {
+		return nil, domain.ErrConflict
+	}
+	now := time.Now()
+	e.Status = domain.EvalStatusApproved
+	e.ApprovedAt = &now
+	e.ApprovedBy = &approverID
+	if err := s.evals.UpdateEvaluation(e); err != nil {
+		return nil, err
+	}
+	s.evals.CreateAuditLog(&domain.AuditLog{
+		UserID: approverID, Action: "approve", Entity: "evaluation", EntityID: e.ID,
+	})
+	return e, nil
+}
+
+func (s *EvaluationService) AddFeedback(id, employeeID uint, feedback string) (*domain.Evaluation, error) {
+	e, err := s.evals.GetEvaluation(id)
+	if err != nil {
+		return nil, err
+	}
+	if e.EmployeeID != employeeID {
+		return nil, domain.ErrForbidden
+	}
+	e.EmployeeFeedback = feedback
+	if err := s.evals.UpdateEvaluation(e); err != nil {
+		return nil, err
+	}
+	s.evals.CreateAuditLog(&domain.AuditLog{
+		UserID: employeeID, Action: "feedback", Entity: "evaluation", EntityID: e.ID,
+	})
+	return e, nil
+}
+
 func (s *EvaluationService) Get(id, userID uint, role domain.Role) (*domain.Evaluation, error) {
 	e, err := s.evals.GetEvaluation(id)
 	if err != nil {
 		return nil, err
 	}
 	switch role {
-	case domain.RoleAdmin:
+	case domain.RoleHR:
 	case domain.RoleManager:
 		if e.EvaluatorID != userID && e.EmployeeID != userID {
 			return nil, domain.ErrForbidden

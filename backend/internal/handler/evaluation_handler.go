@@ -87,6 +87,7 @@ type scoreRequest struct {
 type createEvaluationRequest struct {
 	CycleID    uint           `json:"cycle_id" binding:"required"`
 	EmployeeID uint           `json:"employee_id" binding:"required"`
+	Type       string         `json:"type" binding:"omitempty,oneof=self supervisor"`
 	Comment    string         `json:"comment"`
 	Scores     []scoreRequest `json:"scores" binding:"required,min=1,dive"`
 }
@@ -102,7 +103,7 @@ func (h *EvaluationHandler) Create(c *gin.Context) {
 		scores = append(scores, service.ScoreInput{CriteriaID: s.CriteriaID, Score: s.Score, Comment: s.Comment})
 	}
 	e, err := h.svc.Create(middleware.UserID(c), middleware.UserRole(c), service.CreateEvaluationInput{
-		CycleID: req.CycleID, EmployeeID: req.EmployeeID, Comment: req.Comment, Scores: scores,
+		CycleID: req.CycleID, EmployeeID: req.EmployeeID, Type: req.Type, Comment: req.Comment, Scores: scores,
 	})
 	if err != nil {
 		response.Error(c, err)
@@ -118,6 +119,43 @@ func (h *EvaluationHandler) Submit(c *gin.Context) {
 		return
 	}
 	e, err := h.svc.Submit(uint(id), middleware.UserID(c), middleware.UserRole(c))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, e)
+}
+
+type feedbackRequest struct {
+	Feedback string `json:"feedback" binding:"required"`
+}
+
+func (h *EvaluationHandler) Approve(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+	e, err := h.svc.Approve(uint(id), middleware.UserID(c), middleware.UserRole(c))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, e)
+}
+
+func (h *EvaluationHandler) AddFeedback(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+	var req feedbackRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+	e, err := h.svc.AddFeedback(uint(id), middleware.UserID(c), req.Feedback)
 	if err != nil {
 		response.Error(c, err)
 		return

@@ -55,12 +55,16 @@ func (r *evaluationRepository) UpdateEvaluation(e *domain.Evaluation) error {
 	return r.db.Omit("Scores").Save(e).Error
 }
 
-func (r *evaluationRepository) ExistsFor(cycleID, employeeID uint) (bool, error) {
+func (r *evaluationRepository) ExistsFor(cycleID, employeeID uint, evalType string) (bool, error) {
 	var count int64
 	err := r.db.Model(&domain.Evaluation{}).
-		Where("cycle_id = ? AND employee_id = ?", cycleID, employeeID).
+		Where("cycle_id = ? AND employee_id = ? AND type = ?", cycleID, employeeID, evalType).
 		Count(&count).Error
 	return count > 0, err
+}
+
+func (r *evaluationRepository) CreateAuditLog(a *domain.AuditLog) error {
+	return r.db.Create(a).Error
 }
 
 func (r *evaluationRepository) ListByEmployee(employeeID uint) ([]domain.Evaluation, error) {

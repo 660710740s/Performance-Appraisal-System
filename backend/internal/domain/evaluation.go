@@ -5,6 +5,10 @@ import "time"
 const (
 	EvalStatusDraft     = "draft"
 	EvalStatusSubmitted = "submitted"
+	EvalStatusApproved  = "approved"
+
+	EvalTypeSelf       = "self"
+	EvalTypeSupervisor = "supervisor"
 
 	CycleStatusOpen   = "open"
 	CycleStatusClosed = "closed"
@@ -30,17 +34,21 @@ type Criteria struct {
 }
 
 type Evaluation struct {
-	ID          uint              `gorm:"primaryKey" json:"id"`
-	CycleID     uint              `gorm:"not null;uniqueIndex:idx_cycle_employee" json:"cycle_id"`
-	EmployeeID  uint              `gorm:"not null;uniqueIndex:idx_cycle_employee" json:"employee_id"`
-	EvaluatorID uint              `gorm:"not null;index" json:"evaluator_id"`
-	Status      string            `gorm:"size:20;default:draft" json:"status"`
-	TotalScore  float64           `json:"total_score"`
-	Comment     string            `json:"comment"`
-	Scores      []EvaluationScore `gorm:"foreignKey:EvaluationID;constraint:OnDelete:CASCADE" json:"scores"`
-	SubmittedAt *time.Time        `json:"submitted_at"`
-	CreatedAt   time.Time         `json:"created_at"`
-	UpdatedAt   time.Time         `json:"updated_at"`
+	ID               uint              `gorm:"primaryKey" json:"id"`
+	CycleID          uint              `gorm:"not null;uniqueIndex:idx_cycle_employee_type" json:"cycle_id"`
+	EmployeeID       uint              `gorm:"not null;uniqueIndex:idx_cycle_employee_type" json:"employee_id"`
+	Type             string            `gorm:"size:20;not null;default:supervisor;uniqueIndex:idx_cycle_employee_type" json:"type"`
+	EvaluatorID      uint              `gorm:"not null;index" json:"evaluator_id"`
+	Status           string            `gorm:"size:20;default:draft" json:"status"`
+	TotalScore       float64           `json:"total_score"`
+	Comment          string            `json:"comment"`
+	EmployeeFeedback string            `json:"employee_feedback"`
+	ApprovedBy       *uint             `json:"approved_by"`
+	Scores           []EvaluationScore `gorm:"foreignKey:EvaluationID;constraint:OnDelete:CASCADE" json:"scores"`
+	SubmittedAt      *time.Time        `json:"submitted_at"`
+	ApprovedAt       *time.Time        `json:"approved_at"`
+	CreatedAt        time.Time         `json:"created_at"`
+	UpdatedAt        time.Time         `json:"updated_at"`
 }
 
 type EvaluationScore struct {
@@ -62,7 +70,19 @@ type EvaluationRepository interface {
 	CreateEvaluation(e *Evaluation) error
 	GetEvaluation(id uint) (*Evaluation, error)
 	UpdateEvaluation(e *Evaluation) error
-	ExistsFor(cycleID, employeeID uint) (bool, error)
+	ExistsFor(cycleID, employeeID uint, evalType string) (bool, error)
 	ListByEmployee(employeeID uint) ([]Evaluation, error)
 	ListByEvaluator(evaluatorID uint) ([]Evaluation, error)
+
+	CreateAuditLog(a *AuditLog) error
+}
+
+type AuditLog struct {
+	ID        uint      `gorm:"primaryKey" json:"id"`
+	UserID    uint      `gorm:"not null;index" json:"user_id"`
+	Action    string    `gorm:"size:50;not null" json:"action"`
+	Entity    string    `gorm:"size:50;not null" json:"entity"`
+	EntityID  uint      `gorm:"index" json:"entity_id"`
+	Detail    string    `json:"detail"`
+	CreatedAt time.Time `json:"created_at"`
 }

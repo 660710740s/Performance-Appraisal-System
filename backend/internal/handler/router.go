@@ -21,23 +21,25 @@ func SetupRouter(jwtSecret string, auth *AuthHandler, user *UserHandler, eval *E
 		authed.GET("/me", auth.Me)
 
 		// users
-		authed.POST("/users", middleware.RequireRoles(domain.RoleAdmin, domain.RoleHR), user.Create)
-		authed.GET("/users", middleware.RequireRoles(domain.RoleAdmin, domain.RoleHR), user.List)
-		authed.GET("/team", middleware.RequireRoles(domain.RoleManager, domain.RoleAdmin), user.Team)
+		authed.POST("/users", middleware.RequireRoles(domain.RoleHR), user.Create)
+		authed.GET("/users", middleware.RequireRoles(domain.RoleHR), user.List)
+		authed.GET("/team", middleware.RequireRoles(domain.RoleManager, domain.RoleHR), user.Team)
 
 		// cycles & criteria
 		authed.GET("/cycles", eval.ListCycles)
-		authed.POST("/cycles", middleware.RequireRoles(domain.RoleAdmin, domain.RoleHR), eval.CreateCycle)
+		authed.POST("/cycles", middleware.RequireRoles(domain.RoleHR), eval.CreateCycle)
 		authed.GET("/criteria", eval.ListCriteria)
-		authed.POST("/criteria", middleware.RequireRoles(domain.RoleAdmin, domain.RoleHR, domain.RoleManager), eval.CreateCriteria)
+		authed.POST("/criteria", middleware.RequireRoles(domain.RoleHR, domain.RoleManager), eval.CreateCriteria)
 
 		// evaluations
-		mgr := middleware.RequireRoles(domain.RoleManager, domain.RoleAdmin)
-		authed.POST("/evaluations", mgr, eval.Create)
+		mgr := middleware.RequireRoles(domain.RoleManager, domain.RoleHR)
+		authed.POST("/evaluations", eval.Create)
 		authed.GET("/evaluations/me", eval.ListMine)
 		authed.GET("/evaluations/given", mgr, eval.ListGiven)
 		authed.GET("/evaluations/:id", eval.Get)
-		authed.POST("/evaluations/:id/submit", mgr, eval.Submit)
+		authed.POST("/evaluations/:id/submit", eval.Submit)
+		authed.POST("/evaluations/:id/approve", mgr, eval.Approve)
+		authed.POST("/evaluations/:id/feedback", eval.AddFeedback)
 	}
 	return r
 }
