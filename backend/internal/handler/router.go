@@ -6,7 +6,7 @@ import (
 	"performance/backend/internal/middleware"
 )
 
-func SetupRouter(jwtSecret string, auth *AuthHandler, user *UserHandler, eval *EvaluationHandler) *gin.Engine {
+func SetupRouter(jwtSecret string, auth *AuthHandler, user *UserHandler, eval *EvaluationHandler, acc *AccountingHandler) *gin.Engine {
 	r := gin.Default()
 	r.Use(middleware.CORS())
 
@@ -41,8 +41,8 @@ func SetupRouter(jwtSecret string, auth *AuthHandler, user *UserHandler, eval *E
 		authed.POST("/evaluations/:id/approve", mgr, eval.Approve)
 		authed.POST("/evaluations/:id/feedback", eval.AddFeedback)
 
-		// role-specific route groups (แก้ในไฟล์ router_*.go ของแต่ละคน)
-		registerAccountingRoutes(authed)
+		// role-specific route groups
+		registerAccountingRoutes(authed, acc)
 		registerExecutiveRoutes(authed)
 	}
 	return r

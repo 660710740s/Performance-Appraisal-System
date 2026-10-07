@@ -10,33 +10,34 @@ import (
 )
 
 func NewDB(dsn string) (*gorm.DB, error) {
-        db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
-                TranslateError: true,
-        })
-        if err != nil {
-                return nil, err
-        }
-        sqlDB, err := db.DB()
-        if err != nil {
-                return nil, err
-        }
-        if err := sqlDB.Ping(); err != nil {
-                return nil, err
-        }
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		TranslateError: true,
+	})
+	if err != nil {
+		return nil, err
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	if err := sqlDB.Ping(); err != nil {
+		return nil, err
+	}
 
-        // เพิ่มตรงนี้
-        if err := db.AutoMigrate(
-                &domain.User{},
-                &domain.EvaluationCycle{},
-                &domain.Criteria{},
-                &domain.Evaluation{},
-                &domain.EvaluationScore{},
+	if err := db.AutoMigrate(
+		&domain.User{},
+		&domain.EvaluationCycle{},
+		&domain.Criteria{},
+		&domain.Evaluation{},
+		&domain.EvaluationScore{},
 		&domain.AuditLog{},
-        ); err != nil {
-                return nil, err
-        }
+		&domain.SalaryRecord{},
+		&domain.Bonus{},
+	); err != nil {
+		return nil, err
+	}
 
-        return db, nil
+	return db, nil
 }
 
 func mapErr(err error) error {

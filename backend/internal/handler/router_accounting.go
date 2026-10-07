@@ -6,11 +6,19 @@ import (
 	"performance/backend/internal/middleware"
 )
 
-// คนทำ Accounting: แทนที่ notImplemented ด้วย handler จริงในไฟล์นี้
-func registerAccountingRoutes(authed *gin.RouterGroup) {
+func registerAccountingRoutes(authed *gin.RouterGroup, h *AccountingHandler) {
 	g := authed.Group("/accounting", middleware.RequireRoles(domain.RoleAccounting))
-	g.GET("/salaries", notImplemented)
-	g.POST("/salaries", notImplemented)
-	g.GET("/bonuses", notImplemented)
-	g.POST("/bonuses", notImplemented)
+	g.GET("/salaries", h.ListCurrentSalaries)
+	g.GET("/salaries/:employee_id/history", h.SalaryHistory)
+	g.POST("/salaries", h.SetSalary)
+	g.GET("/bonus-candidates", h.Candidates)
+	g.GET("/bonuses", h.ListBonuses)
+	g.POST("/bonuses", h.CreateBonus)
+	g.PUT("/bonuses/:id", h.UpdateBonus)
+
+	// Executive อนุมัติโบนัส
+	exec := authed.Group("/executive/bonuses", middleware.RequireRoles(domain.RoleExecutive))
+	exec.GET("", h.ListBonuses)
+	exec.POST("/:id/approve", h.Approve)
+	exec.POST("/:id/reject", h.Reject)
 }
