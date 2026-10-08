@@ -6,13 +6,18 @@ import Layout from "./components/Layout";
 import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import EmployeeEvaluationPage from "./pages/EmployeeEvaluationPage";
+import MyResultsPage from "./pages/MyResultsPage";
 import SupervisorApprovalsPage from "./pages/SupervisorApprovalsPage";
+import TrainingPlansPage from "./pages/TrainingPlansPage";
 import HREvaluationsPage from "./pages/HREvaluationsPage";
+import HRProposalsPage from "./pages/HRProposalsPage";
 import HRUsersPage from "./pages/HRUsersPage";
 import HRCyclesPage from "./pages/HRCyclesPage";
 import HRCriteriaPage from "./pages/HRCriteriaPage";
+import AuditLogPage from "./pages/AuditLogPage";
 import AccountingBonusPage from "./pages/AccountingBonusPage";
 import ExecutiveDashboardPage from "./pages/ExecutiveDashboardPage";
+import ExecutiveProposalsPage from "./pages/ExecutiveProposalsPage";
 import ReportsPage from "./pages/ReportsPage";
 
 export default function App() {
@@ -27,6 +32,11 @@ export default function App() {
 
               <Route element={<RoleRoute roles={["employee", "manager"]} />}>
                 <Route path="/evaluations/self" element={<EmployeeEvaluationPage />} />
+                <Route path="/results" element={<MyResultsPage />} />
+              </Route>
+
+              <Route element={<RoleRoute roles={["employee", "manager", "hr"]} />}>
+                <Route path="/training" element={<TrainingPlansPage />} />
               </Route>
 
               <Route element={<RoleRoute roles={["manager"]} />}>
@@ -35,9 +45,11 @@ export default function App() {
 
               <Route element={<RoleRoute roles={["hr"]} />}>
                 <Route path="/hr/evaluations" element={<HREvaluationsPage />} />
+                <Route path="/hr/proposals" element={<HRProposalsPage />} />
                 <Route path="/users" element={<HRUsersPage />} />
                 <Route path="/cycles" element={<HRCyclesPage />} />
                 <Route path="/criteria" element={<HRCriteriaPage />} />
+                <Route path="/audit" element={<AuditLogPage />} />
               </Route>
 
               <Route element={<RoleRoute roles={["accounting"]} />}>
@@ -46,6 +58,7 @@ export default function App() {
 
               <Route element={<RoleRoute roles={["executive"]} />}>
                 <Route path="/executive/dashboard" element={<ExecutiveDashboardPage />} />
+                <Route path="/executive/proposals" element={<ExecutiveProposalsPage />} />
               </Route>
 
               <Route element={<RoleRoute roles={["hr", "executive"]} />}>
