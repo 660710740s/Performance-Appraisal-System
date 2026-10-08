@@ -37,7 +37,18 @@ func (s *EvaluationService) CreateCycle(c *domain.EvaluationCycle) error {
 func (s *EvaluationService) ListCycles() ([]domain.EvaluationCycle, error) {
 	return s.evals.ListCycles()
 }
-func (s *EvaluationService) CreateCriteria(c *domain.Criteria) error {
+func (s *EvaluationService) CreateCriteria(userID uint, role domain.Role, c *domain.Criteria) error {
+	// หัวหน้าสร้างได้เฉพาะเกณฑ์ของแผนกตัวเอง
+	if role == domain.RoleManager {
+		u, err := s.users.GetByID(userID)
+		if err != nil {
+			return err
+		}
+		if u.Department == "" {
+			return domain.ErrForbidden
+		}
+		c.Department = u.Department
+	}
 	c.IsActive = true
 	return s.evals.CreateCriteria(c)
 }
@@ -80,6 +91,9 @@ type UpdateCriteriaInput struct {
 	Description string
 	Weight      float64
 	IsActive    bool
+	Rubric      *string // nil = ไม่เปลี่ยน
+	Department  *string // nil = ไม่เปลี่ยน
+	Level       *string // nil = ไม่เปลี่ยน
 }
 
 func (s *EvaluationService) UpdateCriteria(id uint, in UpdateCriteriaInput) (*domain.Criteria, error) {
@@ -87,8 +101,15 @@ func (s *EvaluationService) UpdateCriteria(id uint, in UpdateCriteriaInput) (*do
 	if err != nil {
 		return nil, err
 	}
-	// แก้น้ำหนัก/สถานะได้เฉพาะตอนยังไม่มีแบบประเมินในระบบ
-	if in.Weight != c.Weight || in.IsActive != c.IsActive {
+	dept, level := c.Department, c.Level
+	if in.Department != nil {
+		dept = *in.Department
+	}
+	if in.Level != nil {
+		level = *in.Level
+	}
+	// แก้น้ำหนัก/สถานะ/แผนก/ระดับได้เฉพาะตอนยังไม่มีแบบประเมินในระบบ
+	if in.Weight != c.Weight || in.IsActive != c.IsActive || dept != c.Department || level != c.Level {
 		n, err := s.evals.CountEvaluations()
 		if err != nil {
 			return nil, err
@@ -101,6 +122,11 @@ func (s *EvaluationService) UpdateCriteria(id uint, in UpdateCriteriaInput) (*do
 	c.Description = in.Description
 	c.Weight = in.Weight
 	c.IsActive = in.IsActive
+	c.Department = dept
+	c.Level = level
+	if in.Rubric != nil {
+		c.Rubric = *in.Rubric
+	}
 	if err := s.evals.UpdateCriteria(c); err != nil {
 		return nil, err
 	}
@@ -148,7 +174,7 @@ func (s *EvaluationService) Create(evaluatorID uint, role domain.Role, in Create
 		return nil, domain.ErrConflict
 	}
 
-	criteria, err := s.evals.ListCriteria()
+	criteria, err := s.evals.ListCriteriaFor(employee.Department, employee.Level)
 	if err != nil {
 		return nil, err
 	}
@@ -287,4 +313,27 @@ func (s *EvaluationService) ListMine(employeeID uint) ([]domain.Evaluation, erro
 
 func (s *EvaluationService) ListGiven(evaluatorID uint) ([]domain.Evaluation, error) {
 	return s.evals.ListByEvaluator(evaluatorID)
+}
+
+// เกณฑ์ที่ใช้กับพนักงานคนหนึ่ง (employeeID = 0 คือไม่ระบุ)
+// HR ไม่ระบุ = เห็นทุกเกณฑ์, คนอื่นไม่ระบุ = เกณฑ์ของตัวเอง
+func (s *EvaluationService) ListCriteriaForUser(userID uint, role domain.Role, employeeID uint) ([]domain.Criteria, error) {
+	if employeeID == 0 {
+		if role == domain.RoleHR {
+			return s.evals.ListCriteria()
+		}
+		employeeID = userID
+	}
+	emp, err := s.users.GetByID(employeeID)
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case role == domain.RoleHR:
+	case emp.ID == userID:
+	case role == domain.RoleManager && emp.ManagerID != nil && *emp.ManagerID == userID:
+	default:
+		return nil, domain.ErrForbidden
+	}
+	return s.evals.ListCriteriaFor(emp.Department, emp.Level)
 }

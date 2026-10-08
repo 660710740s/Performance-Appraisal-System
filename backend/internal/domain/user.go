@@ -25,6 +25,7 @@ type User struct {
 	IsActive     bool      `gorm:"default:true" json:"is_active"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
+	Level        string    `gorm:"size:50" json:"level"`
 }
 
 type UserRepository interface {

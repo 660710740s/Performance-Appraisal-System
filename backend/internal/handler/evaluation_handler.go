@@ -52,6 +52,9 @@ type createCriteriaRequest struct {
 	Name        string  `json:"name" binding:"required"`
 	Description string  `json:"description"`
 	Weight      float64 `json:"weight" binding:"required,gt=0"`
+	Rubric      string  `json:"rubric"`
+	Department  string  `json:"department"`
+	Level       string  `json:"level"`
 }
 
 func (h *EvaluationHandler) CreateCriteria(c *gin.Context) {
@@ -60,8 +63,8 @@ func (h *EvaluationHandler) CreateCriteria(c *gin.Context) {
 		response.BadRequest(c, err)
 		return
 	}
-	cr := &domain.Criteria{Name: req.Name, Description: req.Description, Weight: req.Weight}
-	if err := h.svc.CreateCriteria(cr); err != nil {
+	cr := &domain.Criteria{Name: req.Name, Description: req.Description, Weight: req.Weight, Rubric: req.Rubric, Department: req.Department, Level: req.Level}
+	if err := h.svc.CreateCriteria(middleware.UserID(c), middleware.UserRole(c), cr); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -69,7 +72,8 @@ func (h *EvaluationHandler) CreateCriteria(c *gin.Context) {
 }
 
 func (h *EvaluationHandler) ListCriteria(c *gin.Context) {
-	out, err := h.svc.ListCriteria()
+	empID, _ := strconv.ParseUint(c.Query("employee_id"), 10, 64)
+	out, err := h.svc.ListCriteriaForUser(middleware.UserID(c), middleware.UserRole(c), uint(empID))
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -110,6 +114,9 @@ type updateCriteriaRequest struct {
 	Description string  `json:"description"`
 	Weight      float64 `json:"weight" binding:"required,gt=0"`
 	IsActive    *bool   `json:"is_active" binding:"required"`
+	Rubric      *string `json:"rubric"`
+	Department  *string `json:"department"`
+	Level       *string `json:"level"`
 }
 
 func (h *EvaluationHandler) UpdateCriteria(c *gin.Context) {
@@ -124,7 +131,7 @@ func (h *EvaluationHandler) UpdateCriteria(c *gin.Context) {
 		return
 	}
 	out, err := h.svc.UpdateCriteria(uint(id), service.UpdateCriteriaInput{
-		Name: req.Name, Description: req.Description, Weight: req.Weight, IsActive: *req.IsActive,
+		Name: req.Name, Description: req.Description, Weight: req.Weight, IsActive: *req.IsActive, Rubric: req.Rubric, Department: req.Department, Level: req.Level,
 	})
 	if err != nil {
 		response.Error(c, err)

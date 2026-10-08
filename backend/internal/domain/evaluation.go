@@ -31,6 +31,9 @@ type Criteria struct {
 	Description string  `json:"description"`
 	Weight      float64 `gorm:"not null;default:1" json:"weight"`
 	IsActive    bool    `gorm:"default:true" json:"is_active"`
+	Rubric      string  `gorm:"type:text" json:"rubric"`
+	Department  string  `gorm:"size:100;index" json:"department"`
+	Level       string  `gorm:"size:50" json:"level"`
 }
 
 type Evaluation struct {
@@ -67,6 +70,7 @@ type EvaluationRepository interface {
 
 	CreateCriteria(c *Criteria) error
 	ListCriteria() ([]Criteria, error)
+	ListCriteriaFor(department, level string) ([]Criteria, error)
 	GetCriteria(id uint) (*Criteria, error)
 	UpdateCriteria(c *Criteria) error
 

@@ -70,7 +70,7 @@ func (r *evaluationRepository) CreateAuditLog(a *domain.AuditLog) error {
 func (r *evaluationRepository) ListByEmployee(employeeID uint) ([]domain.Evaluation, error) {
 	var out []domain.Evaluation
 	err := r.db.Preload("Scores").
-		Where("employee_id = ? AND status = ?", employeeID, domain.EvalStatusSubmitted).
+		Where("employee_id = ? AND status IN ?", employeeID, []string{domain.EvalStatusSubmitted, domain.EvalStatusApproved}).
 		Order("id desc").Find(&out).Error
 	return out, err
 }
@@ -100,4 +100,13 @@ func (r *evaluationRepository) CountEvaluations() (int64, error) {
 	var n int64
 	err := r.db.Model(&domain.Evaluation{}).Count(&n).Error
 	return n, err
+}
+
+func (r *evaluationRepository) ListCriteriaFor(department, level string) ([]domain.Criteria, error) {
+	var out []domain.Criteria
+	err := r.db.Where("is_active = ?", true).
+		Where("COALESCE(department, '') IN ('', ?)", department).
+		Where("COALESCE(level, '') IN ('', ?)", level).
+		Order("id").Find(&out).Error
+	return out, err
 }
