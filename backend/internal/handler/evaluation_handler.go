@@ -155,24 +155,55 @@ type createEvaluationRequest struct {
 	Scores     []scoreRequest `json:"scores" binding:"required,min=1,dive"`
 }
 
+func toScoreInputs(in []scoreRequest) []service.ScoreInput {
+	out := make([]service.ScoreInput, 0, len(in))
+	for _, s := range in {
+		out = append(out, service.ScoreInput{CriteriaID: s.CriteriaID, Score: s.Score, Comment: s.Comment})
+	}
+	return out
+}
+
 func (h *EvaluationHandler) Create(c *gin.Context) {
 	var req createEvaluationRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.BadRequest(c, err)
 		return
 	}
-	scores := make([]service.ScoreInput, 0, len(req.Scores))
-	for _, s := range req.Scores {
-		scores = append(scores, service.ScoreInput{CriteriaID: s.CriteriaID, Score: s.Score, Comment: s.Comment})
-	}
 	e, err := h.svc.Create(middleware.UserID(c), middleware.UserRole(c), service.CreateEvaluationInput{
-		CycleID: req.CycleID, EmployeeID: req.EmployeeID, Type: req.Type, Comment: req.Comment, Scores: scores,
+		CycleID: req.CycleID, EmployeeID: req.EmployeeID, Type: req.Type, Comment: req.Comment, Scores: toScoreInputs(req.Scores),
 	})
 	if err != nil {
 		response.Error(c, err)
 		return
 	}
 	response.Created(c, e)
+}
+
+// แก้ไขแบบประเมินที่ยังเป็น draft หรือถูกตีกลับ
+type updateEvaluationRequest struct {
+	Comment string         `json:"comment"`
+	Scores  []scoreRequest `json:"scores" binding:"required,min=1,dive"`
+}
+
+func (h *EvaluationHandler) UpdateDraft(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+	var req updateEvaluationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+	e, err := h.svc.UpdateDraft(uint(id), middleware.UserID(c), service.UpdateEvaluationInput{
+		Comment: req.Comment, Scores: toScoreInputs(req.Scores),
+	})
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, e)
 }
 
 func (h *EvaluationHandler) Submit(c *gin.Context) {
@@ -193,6 +224,10 @@ type feedbackRequest struct {
 	Feedback string `json:"feedback" binding:"required"`
 }
 
+type rejectRequest struct {
+	Reason string `json:"reason" binding:"required"`
+}
+
 func (h *EvaluationHandler) Approve(c *gin.Context) {
 	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
 	if err != nil {
@@ -200,6 +235,26 @@ func (h *EvaluationHandler) Approve(c *gin.Context) {
 		return
 	}
 	e, err := h.svc.Approve(uint(id), middleware.UserID(c), middleware.UserRole(c))
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, e)
+}
+
+// ตีกลับให้ผู้ประเมินแก้ไข (ต้องระบุเหตุผล)
+func (h *EvaluationHandler) Reject(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+	var req rejectRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+	e, err := h.svc.Reject(uint(id), middleware.UserID(c), middleware.UserRole(c), req.Reason)
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -250,7 +305,7 @@ func (h *EvaluationHandler) ListMine(c *gin.Context) {
 	response.OK(c, out)
 }
 
-// ที่ฉันเป็นผู้ประเมิน
+// ที่ฉันเป็นผู้ประเมิน (รวม self-evaluation ของตัวเอง)
 func (h *EvaluationHandler) ListGiven(c *gin.Context) {
 	out, err := h.svc.ListGiven(middleware.UserID(c))
 	if err != nil {

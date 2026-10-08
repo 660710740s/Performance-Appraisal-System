@@ -22,7 +22,7 @@ func accMapErr(err error) error {
 }
 
 func (r *accountingRepository) CreateSalary(s *domain.SalaryRecord) error {
-	return r.db.Create(s).Error
+	return mapErr(r.db.Create(s).Error)
 }
 
 // เงินเดือนที่มีผล ณ วันที่ at

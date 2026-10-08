@@ -14,6 +14,7 @@ type CreateUserInput struct {
 	Department   string
 	Position     string
 	ManagerID    *uint
+	Level        string
 }
 
 type UserService struct{ users domain.UserRepository }
@@ -33,7 +34,7 @@ func (s *UserService) Create(in CreateUserInput) (*domain.User, error) {
 	u := &domain.User{
 		EmployeeCode: in.EmployeeCode, Name: in.Name, Email: in.Email,
 		PasswordHash: string(hash), Role: in.Role, Department: in.Department,
-		Position: in.Position, ManagerID: in.ManagerID, IsActive: true,
+		Position: in.Position, Level: in.Level, ManagerID: in.ManagerID, IsActive: true,
 	}
 	if err := s.users.Create(u); err != nil {
 		return nil, err
@@ -55,6 +56,7 @@ type UpdateUserInput struct {
 	Department   string
 	Position     string
 	ManagerID    *uint
+	Level        string
 }
 
 func (s *UserService) Update(id uint, in UpdateUserInput) (*domain.User, error) {
@@ -78,6 +80,7 @@ func (s *UserService) Update(id uint, in UpdateUserInput) (*domain.User, error) 
 	u.Role = in.Role
 	u.Department = in.Department
 	u.Position = in.Position
+	u.Level = in.Level
 	u.ManagerID = in.ManagerID
 	if err := s.users.Update(u); err != nil {
 		return nil, err

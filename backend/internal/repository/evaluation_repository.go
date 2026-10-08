@@ -55,6 +55,28 @@ func (r *evaluationRepository) UpdateEvaluation(e *domain.Evaluation) error {
 	return r.db.Omit("Scores").Save(e).Error
 }
 
+// แทนที่คะแนนทั้งชุดและบันทึกแบบประเมิน ใน transaction เดียว
+func (r *evaluationRepository) UpdateEvaluationWithScores(e *domain.Evaluation, scores []domain.EvaluationScore) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Where("evaluation_id = ?", e.ID).Delete(&domain.EvaluationScore{}).Error; err != nil {
+			return err
+		}
+		for i := range scores {
+			scores[i].EvaluationID = e.ID
+		}
+		if len(scores) > 0 {
+			if err := tx.Create(&scores).Error; err != nil {
+				return err
+			}
+		}
+		if err := tx.Omit("Scores").Save(e).Error; err != nil {
+			return err
+		}
+		e.Scores = scores
+		return nil
+	})
+}
+
 func (r *evaluationRepository) ExistsFor(cycleID, employeeID uint, evalType string) (bool, error) {
 	var count int64
 	err := r.db.Model(&domain.Evaluation{}).

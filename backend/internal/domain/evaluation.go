@@ -6,6 +6,7 @@ const (
 	EvalStatusDraft     = "draft"
 	EvalStatusSubmitted = "submitted"
 	EvalStatusApproved  = "approved"
+	EvalStatusRejected  = "rejected" // ถูกตีกลับให้แก้ไข
 
 	EvalTypeSelf       = "self"
 	EvalTypeSupervisor = "supervisor"
@@ -77,6 +78,8 @@ type EvaluationRepository interface {
 	CreateEvaluation(e *Evaluation) error
 	GetEvaluation(id uint) (*Evaluation, error)
 	UpdateEvaluation(e *Evaluation) error
+	// แก้ไขแบบประเมินพร้อมแทนที่คะแนนทั้งชุด (ทำใน transaction เดียว)
+	UpdateEvaluationWithScores(e *Evaluation, scores []EvaluationScore) error
 	ExistsFor(cycleID, employeeID uint, evalType string) (bool, error)
 	ListByEmployee(employeeID uint) ([]Evaluation, error)
 	ListByEvaluator(evaluatorID uint) ([]Evaluation, error)

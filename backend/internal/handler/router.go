@@ -21,16 +21,14 @@ func SetupRouter(jwtSecret string, auth *AuthHandler, user *UserHandler, eval *E
 		authed.GET("/me", auth.Me)
 
 		// users
-		// users
 		authed.POST("/users", middleware.RequireRoles(domain.RoleHR), user.Create)
 		authed.GET("/users", middleware.RequireRoles(domain.RoleHR), user.List)
-		authed.PUT("/users/:id", middleware.RequireRoles(domain.RoleHR), user.Update)                  // เพิ่ม
-		authed.PATCH("/users/:id/deactivate", middleware.RequireRoles(domain.RoleHR), user.Deactivate) // เพิ่ม
-		authed.PATCH("/users/:id/activate", middleware.RequireRoles(domain.RoleHR), user.Activate)     // เพิ่ม
+		authed.PUT("/users/:id", middleware.RequireRoles(domain.RoleHR), user.Update)
+		authed.PATCH("/users/:id/deactivate", middleware.RequireRoles(domain.RoleHR), user.Deactivate)
+		authed.PATCH("/users/:id/activate", middleware.RequireRoles(domain.RoleHR), user.Activate)
 		authed.GET("/team", middleware.RequireRoles(domain.RoleManager, domain.RoleHR), user.Team)
 
 		// cycles & criteria
-
 		authed.GET("/cycles", eval.ListCycles)
 		authed.POST("/cycles", middleware.RequireRoles(domain.RoleHR), eval.CreateCycle)
 		authed.PUT("/cycles/:id", middleware.RequireRoles(domain.RoleHR), eval.UpdateCycle)
@@ -42,10 +40,12 @@ func SetupRouter(jwtSecret string, auth *AuthHandler, user *UserHandler, eval *E
 		mgr := middleware.RequireRoles(domain.RoleManager, domain.RoleHR)
 		authed.POST("/evaluations", eval.Create)
 		authed.GET("/evaluations/me", eval.ListMine)
-		authed.GET("/evaluations/given", mgr, eval.ListGiven)
+		authed.GET("/evaluations/given", eval.ListGiven) // ไม่จำกัดบทบาท: พนักงานต้องเห็น self-evaluation ที่ตัวเองสร้าง
 		authed.GET("/evaluations/:id", eval.Get)
+		authed.PUT("/evaluations/:id", eval.UpdateDraft)
 		authed.POST("/evaluations/:id/submit", eval.Submit)
 		authed.POST("/evaluations/:id/approve", mgr, eval.Approve)
+		authed.POST("/evaluations/:id/reject", mgr, eval.Reject)
 		authed.POST("/evaluations/:id/feedback", eval.AddFeedback)
 
 		// role-specific route groups

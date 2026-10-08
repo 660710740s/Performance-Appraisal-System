@@ -2,6 +2,7 @@ package repository
 
 import (
 	"errors"
+	"os"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -24,17 +25,21 @@ func NewDB(dsn string) (*gorm.DB, error) {
 		return nil, err
 	}
 
-	if err := db.AutoMigrate(
-		&domain.User{},
-		&domain.EvaluationCycle{},
-		&domain.Criteria{},
-		&domain.Evaluation{},
-		&domain.EvaluationScore{},
-		&domain.AuditLog{},
-		&domain.SalaryRecord{},
-		&domain.Bonus{},
-	); err != nil {
-		return nil, err
+	// ค่าเริ่มต้น = รัน AutoMigrate (สำหรับ dev)
+	// ตั้ง AUTO_MIGRATE=false เมื่อใช้ไฟล์ใน migrations/ (golang-migrate)
+	if os.Getenv("AUTO_MIGRATE") != "false" {
+		if err := db.AutoMigrate(
+			&domain.User{},
+			&domain.EvaluationCycle{},
+			&domain.Criteria{},
+			&domain.Evaluation{},
+			&domain.EvaluationScore{},
+			&domain.AuditLog{},
+			&domain.SalaryRecord{},
+			&domain.Bonus{},
+		); err != nil {
+			return nil, err
+		}
 	}
 
 	return db, nil

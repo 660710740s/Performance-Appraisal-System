@@ -1,6 +1,7 @@
 package service
 
 import (
+	"strings"
 	"time"
 
 	"performance/backend/internal/domain"
@@ -18,6 +19,11 @@ type CreateEvaluationInput struct {
 	Type       string
 	Comment    string
 	Scores     []ScoreInput
+}
+
+type UpdateEvaluationInput struct {
+	Comment string
+	Scores  []ScoreInput
 }
 
 type EvaluationService struct {
@@ -134,6 +140,42 @@ func (s *EvaluationService) UpdateCriteria(id uint, in UpdateCriteriaInput) (*do
 }
 
 // ---- Evaluation ----
+
+// ตรวจคะแนนให้ครบตามเกณฑ์ของพนักงาน แล้วคำนวณคะแนนรวมถ่วงน้ำหนัก
+// ใช้ร่วมกันระหว่าง Create และ UpdateDraft
+func (s *EvaluationService) buildScores(emp *domain.User, in []ScoreInput) ([]domain.EvaluationScore, float64, error) {
+	criteria, err := s.evals.ListCriteriaFor(emp.Department, emp.Level)
+	if err != nil {
+		return nil, 0, err
+	}
+	weights := make(map[uint]float64, len(criteria))
+	for _, c := range criteria {
+		weights[c.ID] = c.Weight
+	}
+	if len(in) != len(criteria) {
+		return nil, 0, domain.ErrInvalidInput // ต้องให้คะแนนครบทุกเกณฑ์
+	}
+
+	var weighted, totalWeight float64
+	scores := make([]domain.EvaluationScore, 0, len(in))
+	seen := map[uint]bool{}
+	for _, sc := range in {
+		w, ok := weights[sc.CriteriaID]
+		if !ok || seen[sc.CriteriaID] || sc.Score < 1 || sc.Score > 5 {
+			return nil, 0, domain.ErrInvalidInput
+		}
+		seen[sc.CriteriaID] = true
+		weighted += float64(sc.Score) * w
+		totalWeight += w
+		scores = append(scores, domain.EvaluationScore{CriteriaID: sc.CriteriaID, Score: sc.Score, Comment: sc.Comment})
+	}
+	var total float64
+	if totalWeight > 0 {
+		total = weighted / totalWeight
+	}
+	return scores, total, nil
+}
+
 func (s *EvaluationService) Create(evaluatorID uint, role domain.Role, in CreateEvaluationInput) (*domain.Evaluation, error) {
 	cycle, err := s.evals.GetCycle(in.CycleID)
 	if err != nil {
@@ -159,7 +201,11 @@ func (s *EvaluationService) Create(evaluatorID uint, role domain.Role, in Create
 			return nil, domain.ErrForbidden
 		}
 	} else {
-		// supervisor-evaluation: ห้ามประเมินตัวเอง, manager ประเมินได้เฉพาะลูกทีมของตัวเอง
+		// supervisor-evaluation: เฉพาะ manager/HR เท่านั้น
+		if role != domain.RoleManager && role != domain.RoleHR {
+			return nil, domain.ErrForbidden
+		}
+		// ห้ามประเมินตัวเอง, manager ประเมินได้เฉพาะลูกทีมของตัวเอง
 		if evaluatorID == in.EmployeeID {
 			return nil, domain.ErrForbidden
 		}
@@ -174,38 +220,14 @@ func (s *EvaluationService) Create(evaluatorID uint, role domain.Role, in Create
 		return nil, domain.ErrConflict
 	}
 
-	criteria, err := s.evals.ListCriteriaFor(employee.Department, employee.Level)
+	scores, total, err := s.buildScores(employee, in.Scores)
 	if err != nil {
 		return nil, err
-	}
-	weights := make(map[uint]float64, len(criteria))
-	for _, c := range criteria {
-		weights[c.ID] = c.Weight
-	}
-	if len(in.Scores) != len(criteria) {
-		return nil, domain.ErrInvalidInput // ต้องให้คะแนนครบทุกเกณฑ์
-	}
-
-	var weighted, totalWeight float64
-	scores := make([]domain.EvaluationScore, 0, len(in.Scores))
-	seen := map[uint]bool{}
-	for _, sc := range in.Scores {
-		w, ok := weights[sc.CriteriaID]
-		if !ok || seen[sc.CriteriaID] || sc.Score < 1 || sc.Score > 5 {
-			return nil, domain.ErrInvalidInput
-		}
-		seen[sc.CriteriaID] = true
-		weighted += float64(sc.Score) * w
-		totalWeight += w
-		scores = append(scores, domain.EvaluationScore{CriteriaID: sc.CriteriaID, Score: sc.Score, Comment: sc.Comment})
 	}
 
 	e := &domain.Evaluation{
 		CycleID: in.CycleID, EmployeeID: in.EmployeeID, EvaluatorID: evaluatorID, Type: evalType,
-		Status: domain.EvalStatusDraft, Comment: in.Comment, Scores: scores,
-	}
-	if totalWeight > 0 {
-		e.TotalScore = weighted / totalWeight
+		Status: domain.EvalStatusDraft, Comment: in.Comment, Scores: scores, TotalScore: total,
 	}
 	if err := s.evals.CreateEvaluation(e); err != nil {
 		return nil, err
@@ -213,6 +235,44 @@ func (s *EvaluationService) Create(evaluatorID uint, role domain.Role, in Create
 	s.evals.CreateAuditLog(&domain.AuditLog{
 		UserID: evaluatorID, Action: "create", Entity: "evaluation", EntityID: e.ID,
 		Detail: "สร้างแบบประเมิน type=" + evalType,
+	})
+	return e, nil
+}
+
+// แก้ไขแบบประเมินที่ยังเป็น draft หรือถูกตีกลับ (เฉพาะผู้ประเมินเจ้าของ)
+func (s *EvaluationService) UpdateDraft(id, userID uint, in UpdateEvaluationInput) (*domain.Evaluation, error) {
+	e, err := s.evals.GetEvaluation(id)
+	if err != nil {
+		return nil, err
+	}
+	if e.EvaluatorID != userID {
+		return nil, domain.ErrForbidden
+	}
+	if e.Status != domain.EvalStatusDraft && e.Status != domain.EvalStatusRejected {
+		return nil, domain.ErrConflict
+	}
+	cycle, err := s.evals.GetCycle(e.CycleID)
+	if err != nil {
+		return nil, err
+	}
+	if cycle.Status != domain.CycleStatusOpen {
+		return nil, domain.ErrInvalidInput
+	}
+	emp, err := s.users.GetByID(e.EmployeeID)
+	if err != nil {
+		return nil, err
+	}
+	scores, total, err := s.buildScores(emp, in.Scores)
+	if err != nil {
+		return nil, err
+	}
+	e.Comment = in.Comment
+	e.TotalScore = total
+	if err := s.evals.UpdateEvaluationWithScores(e, scores); err != nil {
+		return nil, err
+	}
+	s.evals.CreateAuditLog(&domain.AuditLog{
+		UserID: userID, Action: "update", Entity: "evaluation", EntityID: e.ID,
 	})
 	return e, nil
 }
@@ -225,8 +285,16 @@ func (s *EvaluationService) Submit(id, evaluatorID uint, role domain.Role) (*dom
 	if role != domain.RoleHR && e.EvaluatorID != evaluatorID {
 		return nil, domain.ErrForbidden
 	}
-	if e.Status != domain.EvalStatusDraft {
+	// ส่งได้เฉพาะ draft หรือแบบที่ถูกตีกลับมาแก้แล้ว
+	if e.Status != domain.EvalStatusDraft && e.Status != domain.EvalStatusRejected {
 		return nil, domain.ErrConflict
+	}
+	cycle, err := s.evals.GetCycle(e.CycleID)
+	if err != nil {
+		return nil, err
+	}
+	if cycle.Status != domain.CycleStatusOpen {
+		return nil, domain.ErrInvalidInput
 	}
 	now := time.Now()
 	e.Status = domain.EvalStatusSubmitted
@@ -234,7 +302,31 @@ func (s *EvaluationService) Submit(id, evaluatorID uint, role domain.Role) (*dom
 	if err := s.evals.UpdateEvaluation(e); err != nil {
 		return nil, err
 	}
+	s.evals.CreateAuditLog(&domain.AuditLog{
+		UserID: evaluatorID, Action: "submit", Entity: "evaluation", EntityID: e.ID,
+	})
 	return e, nil
+}
+
+// ตรวจสิทธิ์ผู้อนุมัติ/ตีกลับ: HR หรือหัวหน้าโดยตรงของพนักงาน
+// และห้ามตรวจแบบประเมินที่ตัวเองเป็นผู้ประเมินหรือเป็นเจ้าของ
+func (s *EvaluationService) checkReviewer(e *domain.Evaluation, reviewerID uint, role domain.Role) error {
+	if role != domain.RoleHR && role != domain.RoleManager {
+		return domain.ErrForbidden
+	}
+	if reviewerID == e.EvaluatorID || reviewerID == e.EmployeeID {
+		return domain.ErrForbidden
+	}
+	if role == domain.RoleManager {
+		emp, err := s.users.GetByID(e.EmployeeID)
+		if err != nil {
+			return err
+		}
+		if emp.ManagerID == nil || *emp.ManagerID != reviewerID {
+			return domain.ErrForbidden
+		}
+	}
+	return nil
 }
 
 func (s *EvaluationService) Approve(id, approverID uint, role domain.Role) (*domain.Evaluation, error) {
@@ -242,17 +334,8 @@ func (s *EvaluationService) Approve(id, approverID uint, role domain.Role) (*dom
 	if err != nil {
 		return nil, err
 	}
-	if role != domain.RoleHR && role != domain.RoleManager {
-		return nil, domain.ErrForbidden
-	}
-	if role == domain.RoleManager {
-		emp, err := s.users.GetByID(e.EmployeeID)
-		if err != nil {
-			return nil, err
-		}
-		if emp.ManagerID == nil || *emp.ManagerID != approverID {
-			return nil, domain.ErrForbidden
-		}
+	if err := s.checkReviewer(e, approverID, role); err != nil {
+		return nil, err
 	}
 	if e.Status != domain.EvalStatusSubmitted {
 		return nil, domain.ErrConflict
@@ -270,6 +353,32 @@ func (s *EvaluationService) Approve(id, approverID uint, role domain.Role) (*dom
 	return e, nil
 }
 
+// ตีกลับให้ผู้ประเมินแก้ไข ต้องระบุเหตุผล (เก็บใน audit log)
+func (s *EvaluationService) Reject(id, reviewerID uint, role domain.Role, reason string) (*domain.Evaluation, error) {
+	if strings.TrimSpace(reason) == "" {
+		return nil, domain.ErrInvalidInput
+	}
+	e, err := s.evals.GetEvaluation(id)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.checkReviewer(e, reviewerID, role); err != nil {
+		return nil, err
+	}
+	if e.Status != domain.EvalStatusSubmitted {
+		return nil, domain.ErrConflict
+	}
+	e.Status = domain.EvalStatusRejected
+	e.SubmittedAt = nil
+	if err := s.evals.UpdateEvaluation(e); err != nil {
+		return nil, err
+	}
+	s.evals.CreateAuditLog(&domain.AuditLog{
+		UserID: reviewerID, Action: "reject", Entity: "evaluation", EntityID: e.ID, Detail: reason,
+	})
+	return e, nil
+}
+
 func (s *EvaluationService) AddFeedback(id, employeeID uint, feedback string) (*domain.Evaluation, error) {
 	e, err := s.evals.GetEvaluation(id)
 	if err != nil {
@@ -277,6 +386,11 @@ func (s *EvaluationService) AddFeedback(id, employeeID uint, feedback string) (*
 	}
 	if e.EmployeeID != employeeID {
 		return nil, domain.ErrForbidden
+	}
+	// feedback ใช้กับผลประเมินของหัวหน้าที่ส่งแล้วหรืออนุมัติแล้วเท่านั้น
+	if e.Type != domain.EvalTypeSupervisor ||
+		(e.Status != domain.EvalStatusSubmitted && e.Status != domain.EvalStatusApproved) {
+		return nil, domain.ErrConflict
 	}
 	e.EmployeeFeedback = feedback
 	if err := s.evals.UpdateEvaluation(e); err != nil {
@@ -293,14 +407,24 @@ func (s *EvaluationService) Get(id, userID uint, role domain.Role) (*domain.Eval
 	if err != nil {
 		return nil, err
 	}
+	visible := e.Status == domain.EvalStatusSubmitted || e.Status == domain.EvalStatusApproved
 	switch role {
 	case domain.RoleHR:
 	case domain.RoleManager:
 		if e.EvaluatorID != userID && e.EmployeeID != userID {
-			return nil, domain.ErrForbidden
+			// หัวหน้าโดยตรงดูแบบของลูกทีมได้เมื่อส่งแล้ว (รวม self-evaluation ที่ต้องอนุมัติ)
+			emp, err := s.users.GetByID(e.EmployeeID)
+			if err != nil {
+				return nil, err
+			}
+			if emp.ManagerID == nil || *emp.ManagerID != userID || !visible {
+				return nil, domain.ErrForbidden
+			}
 		}
 	default:
-		if e.EmployeeID != userID || (e.Status != domain.EvalStatusSubmitted && e.Status != domain.EvalStatusApproved) {
+		// พนักงานดูของตัวเองได้เมื่อส่งแล้ว และดู self-evaluation ที่ตัวเองสร้างได้ทุกสถานะ
+		ownSelf := e.EvaluatorID == userID && e.Type == domain.EvalTypeSelf
+		if e.EmployeeID != userID || !(ownSelf || visible) {
 			return nil, domain.ErrForbidden
 		}
 	}

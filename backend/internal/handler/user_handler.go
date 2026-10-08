@@ -23,6 +23,7 @@ type createUserRequest struct {
 	Department   string      `json:"department"`
 	Position     string      `json:"position"`
 	ManagerID    *uint       `json:"manager_id"`
+	Level        string      `json:"level"`
 }
 
 func (h *UserHandler) Create(c *gin.Context) {
@@ -33,7 +34,7 @@ func (h *UserHandler) Create(c *gin.Context) {
 	}
 	u, err := h.users.Create(service.CreateUserInput{
 		EmployeeCode: req.EmployeeCode, Name: req.Name, Email: req.Email, Password: req.Password,
-		Role: req.Role, Department: req.Department, Position: req.Position, ManagerID: req.ManagerID,
+		Role: req.Role, Department: req.Department, Position: req.Position, Level: req.Level, ManagerID: req.ManagerID,
 	})
 	if err != nil {
 		response.Error(c, err)
@@ -69,6 +70,7 @@ type updateUserRequest struct {
 	Department   string      `json:"department"`
 	Position     string      `json:"position"`
 	ManagerID    *uint       `json:"manager_id"`
+	Level        string      `json:"level"`
 }
 
 func (h *UserHandler) Update(c *gin.Context) {
@@ -84,7 +86,7 @@ func (h *UserHandler) Update(c *gin.Context) {
 	}
 	u, err := h.users.Update(uint(id), service.UpdateUserInput{
 		EmployeeCode: req.EmployeeCode, Name: req.Name, Email: req.Email,
-		Role: req.Role, Department: req.Department, Position: req.Position, ManagerID: req.ManagerID,
+		Role: req.Role, Department: req.Department, Position: req.Position, Level: req.Level, ManagerID: req.ManagerID,
 	})
 	if err != nil {
 		response.Error(c, err)
