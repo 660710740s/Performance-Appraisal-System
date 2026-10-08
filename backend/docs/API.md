@@ -310,6 +310,44 @@ HR เสนอ executive อนุมัติหรือปฏิเสธ �
 - โอนไปแผนกเดิม ได้ 400 
 - executive ตัดสินข้อเสนอที่ตัวเองเป็นผู้ถูกเสนอไม่ได้ (403) (ยังไม่ได้ทดสอบ)
 
+## แผนฝึกอบรม
+
+manager (เฉพาะลูกทีมโดยตรง) และ hr สร้างและจัดการได้ ผูกกับแบบประเมินแบบ `supervisor` ที่ `approved` 1 ใบมีได้หลายแผน ไม่มีขั้นอนุมัติ
+สถานะ: `planned`, `in_progress`, `completed`, `cancelled`
+
+| Method | Path | Role | คำอธิบาย |
+|---|---|---|---|
+| GET | /training-plans | ทุกคน (ขอบเขตตามสิทธิ์) | `?employee_id=&evaluation_id=&status=` |
+| POST | /training-plans | manager, hr | สร้างแผน (201) |
+| PUT | /training-plans/:id | manager, hr | แก้หัวข้อ เหตุผล วันที่ |
+| PATCH | /training-plans/:id/status | manager, hr | body `{"status"}` เปลี่ยนสถานะ |
+
+**POST /training-plans** body
+
+```json
+{"evaluation_id": 1, "topic": "Code Review", "reason": "", "start_date": "2026-11-01T00:00:00Z", "end_date": "2026-11-30T00:00:00Z"}
+```
+
+- จำเป็น: `evaluation_id`, `topic` (ไม่เกิน 255 ตัวอักษร) ส่วน `reason`, `start_date`, `end_date` (RFC 3339) ไม่จำเป็น
+- **PUT** body ไม่มี `evaluation_id` ส่ง `topic` ทุกครั้ง
+
+ตัวอย่าง response
+
+```json
+{
+  "id": 1, "evaluation_id": 1, "employee_id": 7, "topic": "Code Review", "reason": "",
+  "start_date": "2026-11-01T00:00:00Z", "end_date": "2026-11-30T00:00:00Z",
+  "status": "planned", "created_by": 4, "created_at": "...", "updated_at": "..."
+}
+```
+
+กติกา (ทดสอบแล้ว)
+- ผู้เรียกที่สร้างหรือแก้ได้: hr ทุกคน, manager เฉพาะลูกทีมโดยตรง (นอกนั้นได้ 403)
+- สร้างได้เฉพาะแบบประเมิน `supervisor` ที่ `approved` แบบประเมินไม่มีได้ 404 ไม่ส่ง `topic` หรือวันสิ้นสุดก่อนวันเริ่มได้ 400
+- การดูรายการ: hr เห็นทั้งหมด, manager เห็นลูกทีมและของตัวเอง, role อื่นเห็นเฉพาะของตัวเอง ขอดูของคนที่ไม่มีสิทธิ์ได้ 403, ไม่มีข้อมูลได้ `data: []`
+- เปลี่ยนสถานะได้เฉพาะ `planned` → `in_progress` หรือ `cancelled` และ `in_progress` → `completed` หรือ `cancelled` นอกนั้นได้ 409, ค่าสถานะที่ไม่รู้จักได้ 400
+- แก้ไขแผนที่ `completed` หรือ `cancelled` แล้วไม่ได้ (409)
+
 ## ยังไม่มี API
 
 โอนย้ายและแผนฝึกอบรม มีตารางในฐานข้อมูลแล้ว (`transfer_requests`, `training_plans`) แต่ยังไม่มี endpoint
