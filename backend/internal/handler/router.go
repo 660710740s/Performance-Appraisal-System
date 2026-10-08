@@ -48,6 +48,12 @@ func SetupRouter(jwtSecret string, auth *AuthHandler, user *UserHandler, eval *E
 		authed.POST("/evaluations/:id/reject", mgr, eval.Reject)
 		authed.POST("/evaluations/:id/feedback", eval.AddFeedback)
 
+		// reports & audit
+		hr := middleware.RequireRoles(domain.RoleHR)
+		authed.GET("/reports/evaluations", hr, rpt.ListEvaluations)
+		authed.GET("/audit-logs", hr, rpt.AuditLogs)
+		authed.GET("/reports/annual", middleware.RequireRoles(domain.RoleHR, domain.RoleExecutive), rpt.Annual)
+
 		// role-specific route groups
 		registerAccountingRoutes(authed, acc)
 		registerExecutiveRoutes(authed, rpt)
