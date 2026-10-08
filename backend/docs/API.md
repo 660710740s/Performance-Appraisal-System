@@ -268,6 +268,48 @@ HR เสนอ executive อนุมัติหรือปฏิเสธ �
 - การอนุมัติ **ไม่แก้** ตำแหน่งหรือระดับในข้อมูลพนักงาน เป็นแค่บันทึกการตัดสินใจ
 - executive ตัดสินข้อเสนอที่ตัวเองเป็นผู้ถูกเสนอไม่ได้ (403) (ยังไม่ได้ทดสอบ)
 
+## โอนย้ายแผนก
+
+HR เสนอ executive อนุมัติหรือปฏิเสธ ผูกกับแบบประเมินแบบ `supervisor` ที่ `approved` 1 ใบต่อ 1 ข้อเสนอ
+สถานะ: `pending_approval`, `approved`, `rejected`
+
+| Method | Path | Role | คำอธิบาย |
+|---|---|---|---|
+| GET | /hr/transfers | hr | รายการข้อเสนอ `?cycle_id=&status=` ไม่ส่ง = ทั้งหมด |
+| POST | /hr/transfers | hr | เสนอโอนย้าย (201) |
+| GET | /executive/transfers | executive | รายการข้อเสนอ `?cycle_id=&status=` |
+| POST | /executive/transfers/:id/approve | executive | body `{"note"?}` |
+| POST | /executive/transfers/:id/reject | executive | body `{"note"?}` |
+
+**POST /hr/transfers** body
+
+```json
+{"evaluation_id": 1, "to_department": "การตลาด", "effective_date": "2026-11-01T00:00:00Z", "note": ""}
+```
+
+- จำเป็น: `evaluation_id`, `to_department` (ไม่เกิน 100 ตัวอักษร) ส่วน `effective_date` (RFC 3339) และ `note` ไม่จำเป็น
+- ระบบจดแผนกปัจจุบันของพนักงานเป็น `from_department` ให้เอง
+
+ตัวอย่าง response
+
+```json
+{
+  "id": 1, "evaluation_id": 1, "cycle_id": 3, "employee_id": 7,
+  "from_department": "พัฒนาซอฟต์แวร์", "to_department": "การตลาด",
+  "effective_date": "2026-11-01T00:00:00Z",
+  "status": "pending_approval", "note": "", "decision_note": "",
+  "created_by": 1, "decided_by": null, "decided_at": null,
+  "created_at": "...", "updated_at": "..."
+}
+```
+
+กติกา (ทดสอบแล้ว ยกเว้นที่ระบุ)
+- เสนอซ้ำสำหรับแบบประเมินใบเดิม ได้ 409, แบบประเมินไม่มี ได้ 404, ไม่ส่ง `to_department` ได้ 400
+- ตัดสินได้เฉพาะ `pending_approval` ตัดสินซ้ำหรือกลับคำตัดสิน ได้ 409
+- การอนุมัติ **ไม่แก้** แผนกในข้อมูลพนักงาน เป็นแค่บันทึกการตัดสินใจ
+- โอนไปแผนกเดิม ได้ 400 (ยังรอผลทดสอบ)
+- executive ตัดสินข้อเสนอที่ตัวเองเป็นผู้ถูกเสนอไม่ได้ (403) (ยังไม่ได้ทดสอบ)
+
 ## ยังไม่มี API
 
 โอนย้ายและแผนฝึกอบรม มีตารางในฐานข้อมูลแล้ว (`transfer_requests`, `training_plans`) แต่ยังไม่มี endpoint

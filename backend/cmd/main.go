@@ -27,6 +27,7 @@ func main() {
 	accRepo := repository.NewAccountingRepository(db)
 	reportRepo := repository.NewReportRepository(db)
 	promoRepo := repository.NewPromotionRepository(db)
+	transferRepo := repository.NewTransferRepository(db)
 
 	// services
 	authSvc := service.NewAuthService(userRepo, cfg.JWTSecret, 24*time.Hour)
@@ -35,6 +36,7 @@ func main() {
 	accSvc := service.NewAccountingService(accRepo, evalRepo, userRepo)
 	reportSvc := service.NewReportService(reportRepo, evalRepo, accRepo)
 	promoSvc := service.NewPromotionService(promoRepo, evalRepo, userRepo)
+	transferSvc := service.NewTransferService(transferRepo, evalRepo, userRepo)
 
 	// handlers
 	authHandler := handler.NewAuthHandler(authSvc, userSvc)
@@ -43,9 +45,10 @@ func main() {
 	accHandler := handler.NewAccountingHandler(accSvc)
 	reportHandler := handler.NewReportHandler(reportSvc)
 	promoHandler := handler.NewPromotionHandler(promoSvc)
+	transferHandler := handler.NewTransferHandler(transferSvc)
 
 	// router
-	r := handler.SetupRouter(cfg.JWTSecret, authHandler, userHandler, evalHandler, accHandler, reportHandler, promoHandler)
+	r := handler.SetupRouter(cfg.JWTSecret, authHandler, userHandler, evalHandler, accHandler, reportHandler, promoHandler, transferHandler)
 
 	log.Printf("server running on :%s", cfg.ServerPort)
 	if err := r.Run(":" + cfg.ServerPort); err != nil {
