@@ -8,6 +8,7 @@ export interface User {
   role: Role;
   department: string;
   position: string;
+  level?: string;
   manager_id: number | null;
   is_active: boolean;
   created_at: string;
@@ -27,6 +28,10 @@ export interface Criteria {
   name: string;
   description: string;
   weight: number;
+  rubric?: string;
+  department?: string;
+  level?: string;
+  is_active?: boolean;
 }
 
 export interface Score {
