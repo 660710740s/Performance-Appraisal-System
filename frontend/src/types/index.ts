@@ -1,4 +1,3 @@
-
 export type Role = "employee" | "manager" | "hr" | "accounting" | "executive";
 
 export interface User {
@@ -20,6 +19,7 @@ export interface Cycle {
   name: string;
   start_date: string;
   end_date: string;
+  status?: "open" | "closed";
 }
 
 export interface Criteria {
@@ -35,13 +35,18 @@ export interface Score {
   comment: string;
 }
 
+export type EvaluationStatus = "draft" | "submitted" | "approved" | "rejected";
+
 export interface Evaluation {
   id: number;
   cycle_id: number;
   employee_id: number;
+  type: "self" | "supervisor";
   evaluator_id?: number;
+  status: EvaluationStatus;
+  total_score?: number;
   comment: string;
-  status?: string;
+  employee_feedback?: string;
   scores: Score[];
 }
 
