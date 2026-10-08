@@ -80,3 +80,24 @@ func (r *evaluationRepository) ListByEvaluator(evaluatorID uint) ([]domain.Evalu
 	err := r.db.Preload("Scores").Where("evaluator_id = ?", evaluatorID).Order("id desc").Find(&out).Error
 	return out, err
 }
+func (r *evaluationRepository) UpdateCycle(c *domain.EvaluationCycle) error {
+	return r.db.Save(c).Error
+}
+
+func (r *evaluationRepository) GetCriteria(id uint) (*domain.Criteria, error) {
+	var c domain.Criteria
+	if err := r.db.First(&c, id).Error; err != nil {
+		return nil, mapErr(err)
+	}
+	return &c, nil
+}
+
+func (r *evaluationRepository) UpdateCriteria(c *domain.Criteria) error {
+	return r.db.Save(c).Error
+}
+
+func (r *evaluationRepository) CountEvaluations() (int64, error) {
+	var n int64
+	err := r.db.Model(&domain.Evaluation{}).Count(&n).Error
+	return n, err
+}

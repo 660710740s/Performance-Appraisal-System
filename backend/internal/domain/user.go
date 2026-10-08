@@ -33,4 +33,5 @@ type UserRepository interface {
 	GetByEmail(email string) (*User, error)
 	List() ([]User, error)
 	ListByManager(managerID uint) ([]User, error)
+	Update(u *User) error // เพิ่มใหม่
 }

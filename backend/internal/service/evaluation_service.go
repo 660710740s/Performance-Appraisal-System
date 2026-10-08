@@ -45,6 +45,68 @@ func (s *EvaluationService) ListCriteria() ([]domain.Criteria, error) {
 	return s.evals.ListCriteria()
 }
 
+type UpdateCycleInput struct {
+	Name      string
+	StartDate time.Time
+	EndDate   time.Time
+	Status    string // ว่าง = ไม่เปลี่ยนสถานะ
+}
+
+func (s *EvaluationService) UpdateCycle(id uint, in UpdateCycleInput) (*domain.EvaluationCycle, error) {
+	c, err := s.evals.GetCycle(id)
+	if err != nil {
+		return nil, err
+	}
+	if c.Status != domain.CycleStatusOpen {
+		return nil, domain.ErrConflict // รอบปิดแล้ว ห้ามแก้
+	}
+	if !in.EndDate.After(in.StartDate) {
+		return nil, domain.ErrInvalidInput
+	}
+	c.Name = in.Name
+	c.StartDate = in.StartDate
+	c.EndDate = in.EndDate
+	if in.Status != "" {
+		c.Status = in.Status
+	}
+	if err := s.evals.UpdateCycle(c); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
+type UpdateCriteriaInput struct {
+	Name        string
+	Description string
+	Weight      float64
+	IsActive    bool
+}
+
+func (s *EvaluationService) UpdateCriteria(id uint, in UpdateCriteriaInput) (*domain.Criteria, error) {
+	c, err := s.evals.GetCriteria(id)
+	if err != nil {
+		return nil, err
+	}
+	// แก้น้ำหนัก/สถานะได้เฉพาะตอนยังไม่มีแบบประเมินในระบบ
+	if in.Weight != c.Weight || in.IsActive != c.IsActive {
+		n, err := s.evals.CountEvaluations()
+		if err != nil {
+			return nil, err
+		}
+		if n > 0 {
+			return nil, domain.ErrConflict
+		}
+	}
+	c.Name = in.Name
+	c.Description = in.Description
+	c.Weight = in.Weight
+	c.IsActive = in.IsActive
+	if err := s.evals.UpdateCriteria(c); err != nil {
+		return nil, err
+	}
+	return c, nil
+}
+
 // ---- Evaluation ----
 func (s *EvaluationService) Create(evaluatorID uint, role domain.Role, in CreateEvaluationInput) (*domain.Evaluation, error) {
 	cycle, err := s.evals.GetCycle(in.CycleID)
@@ -211,9 +273,9 @@ func (s *EvaluationService) Get(id, userID uint, role domain.Role) (*domain.Eval
 		if e.EvaluatorID != userID && e.EmployeeID != userID {
 			return nil, domain.ErrForbidden
 		}
-default:
-	if e.EmployeeID != userID || (e.Status != domain.EvalStatusSubmitted && e.Status != domain.EvalStatusApproved) {
-		return nil, domain.ErrForbidden
+	default:
+		if e.EmployeeID != userID || (e.Status != domain.EvalStatusSubmitted && e.Status != domain.EvalStatusApproved) {
+			return nil, domain.ErrForbidden
 		}
 	}
 	return e, nil

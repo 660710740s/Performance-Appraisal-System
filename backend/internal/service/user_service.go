@@ -46,3 +46,57 @@ func (s *UserService) List() ([]domain.User, error)          { return s.users.Li
 func (s *UserService) Team(managerID uint) ([]domain.User, error) {
 	return s.users.ListByManager(managerID)
 }
+
+type UpdateUserInput struct {
+	EmployeeCode string
+	Name         string
+	Email        string
+	Role         domain.Role
+	Department   string
+	Position     string
+	ManagerID    *uint
+}
+
+func (s *UserService) Update(id uint, in UpdateUserInput) (*domain.User, error) {
+	u, err := s.users.GetByID(id)
+	if err != nil || u == nil {
+		return nil, domain.ErrNotFound
+	}
+	// เช็กอีเมลซ้ำ เฉพาะตอนเปลี่ยนอีเมล
+	if in.Email != u.Email {
+		if existing, _ := s.users.GetByEmail(in.Email); existing != nil && existing.ID != id {
+			return nil, domain.ErrConflict
+		}
+	}
+	// กันตั้งตัวเองเป็นหัวหน้าตัวเอง
+	if in.ManagerID != nil && *in.ManagerID == id {
+		return nil, domain.ErrConflict
+	}
+	u.EmployeeCode = in.EmployeeCode
+	u.Name = in.Name
+	u.Email = in.Email
+	u.Role = in.Role
+	u.Department = in.Department
+	u.Position = in.Position
+	u.ManagerID = in.ManagerID
+	if err := s.users.Update(u); err != nil {
+		return nil, err
+	}
+	return u, nil
+}
+
+// SetActive เปิด/ปิดใช้งาน (soft delete) ห้าม HR ปิดตัวเอง
+func (s *UserService) SetActive(actorID, id uint, active bool) (*domain.User, error) {
+	if !active && actorID == id {
+		return nil, domain.ErrConflict
+	}
+	u, err := s.users.GetByID(id)
+	if err != nil || u == nil {
+		return nil, domain.ErrNotFound
+	}
+	u.IsActive = active
+	if err := s.users.Update(u); err != nil {
+		return nil, err
+	}
+	return u, nil
+}

@@ -77,6 +77,62 @@ func (h *EvaluationHandler) ListCriteria(c *gin.Context) {
 	response.OK(c, out)
 }
 
+type updateCycleRequest struct {
+	Name      string    `json:"name" binding:"required"`
+	StartDate time.Time `json:"start_date" binding:"required"`
+	EndDate   time.Time `json:"end_date" binding:"required"`
+	Status    string    `json:"status" binding:"omitempty,oneof=open closed"`
+}
+
+func (h *EvaluationHandler) UpdateCycle(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+	var req updateCycleRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+	out, err := h.svc.UpdateCycle(uint(id), service.UpdateCycleInput{
+		Name: req.Name, StartDate: req.StartDate, EndDate: req.EndDate, Status: req.Status,
+	})
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, out)
+}
+
+type updateCriteriaRequest struct {
+	Name        string  `json:"name" binding:"required"`
+	Description string  `json:"description"`
+	Weight      float64 `json:"weight" binding:"required,gt=0"`
+	IsActive    *bool   `json:"is_active" binding:"required"`
+}
+
+func (h *EvaluationHandler) UpdateCriteria(c *gin.Context) {
+	id, err := strconv.ParseUint(c.Param("id"), 10, 64)
+	if err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+	var req updateCriteriaRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+	out, err := h.svc.UpdateCriteria(uint(id), service.UpdateCriteriaInput{
+		Name: req.Name, Description: req.Description, Weight: req.Weight, IsActive: *req.IsActive,
+	})
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, out)
+}
+
 // ---- Evaluation ----
 type scoreRequest struct {
 	CriteriaID uint   `json:"criteria_id" binding:"required"`

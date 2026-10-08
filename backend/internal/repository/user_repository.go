@@ -42,3 +42,7 @@ func (r *userRepository) ListByManager(managerID uint) ([]domain.User, error) {
 	err := r.db.Where("manager_id = ?", managerID).Order("id").Find(&users).Error
 	return users, err
 }
+
+func (r *userRepository) Update(u *domain.User) error {
+	return r.db.Save(u).Error
+}

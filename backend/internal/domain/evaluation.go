@@ -63,9 +63,12 @@ type EvaluationRepository interface {
 	CreateCycle(c *EvaluationCycle) error
 	ListCycles() ([]EvaluationCycle, error)
 	GetCycle(id uint) (*EvaluationCycle, error)
+	UpdateCycle(c *EvaluationCycle) error
 
 	CreateCriteria(c *Criteria) error
 	ListCriteria() ([]Criteria, error)
+	GetCriteria(id uint) (*Criteria, error)
+	UpdateCriteria(c *Criteria) error
 
 	CreateEvaluation(e *Evaluation) error
 	GetEvaluation(id uint) (*Evaluation, error)
@@ -73,6 +76,7 @@ type EvaluationRepository interface {
 	ExistsFor(cycleID, employeeID uint, evalType string) (bool, error)
 	ListByEmployee(employeeID uint) ([]Evaluation, error)
 	ListByEvaluator(evaluatorID uint) ([]Evaluation, error)
+	CountEvaluations() (int64, error)
 
 	CreateAuditLog(a *AuditLog) error
 }

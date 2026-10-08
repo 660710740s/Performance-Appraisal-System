@@ -7,13 +7,13 @@ type DepartmentScore struct {
 }
 
 type CycleProgress struct {
-	CycleID      uint   `json:"cycle_id"`
-	CycleName    string `json:"cycle_name"`
-	TotalPeople  int    `json:"total_people"` // พนักงานที่ต้องถูกประเมิน (employee ที่ active)
-	NotStarted   int    `json:"not_started"`
-	Draft        int    `json:"draft"`
-	Submitted    int    `json:"submitted"`
-	Approved     int    `json:"approved"`
+	CycleID     uint   `json:"cycle_id"`
+	CycleName   string `json:"cycle_name"`
+	TotalPeople int    `json:"total_people"` // พนักงานที่ต้องถูกประเมิน (employee ที่ active)
+	NotStarted  int    `json:"not_started"`
+	Draft       int    `json:"draft"`
+	Submitted   int    `json:"submitted"`
+	Approved    int    `json:"approved"`
 }
 
 type BonusStat struct {
