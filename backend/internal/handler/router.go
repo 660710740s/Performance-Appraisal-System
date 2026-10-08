@@ -6,7 +6,7 @@ import (
 	"performance/backend/internal/middleware"
 )
 
-func SetupRouter(jwtSecret string, auth *AuthHandler, user *UserHandler, eval *EvaluationHandler, acc *AccountingHandler, rpt *ReportHandler) *gin.Engine {
+func SetupRouter(jwtSecret string, auth *AuthHandler, user *UserHandler, eval *EvaluationHandler, acc *AccountingHandler, rpt *ReportHandler, promo *PromotionHandler) *gin.Engine {
 	r := gin.Default()
 	r.Use(middleware.CORS())
 
@@ -58,6 +58,7 @@ func SetupRouter(jwtSecret string, auth *AuthHandler, user *UserHandler, eval *E
 		// role-specific route groups
 		registerAccountingRoutes(authed, acc)
 		registerExecutiveRoutes(authed, rpt)
+		registerCareerRoutes(authed, promo)
 	}
 	return r
 }
