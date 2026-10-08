@@ -88,4 +88,7 @@ type ReportRepository interface {
 	ListUsers() ([]User, error)
 	ListEvaluationRows(f EvaluationFilter) ([]EvaluationRow, error)
 	ListAuditLogs(f AuditFilter) ([]AuditLog, error)
+	// ประวัติรายคน: statuses ว่าง = ทุกสถานะ
+	GetUserByID(id uint) (*User, error)
+	ListEmployeeEvaluationRows(employeeID uint, statuses []string) ([]EvaluationRow, error)
 }
