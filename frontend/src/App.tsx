@@ -7,6 +7,7 @@ import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import EmployeeEvaluationPage from "./pages/EmployeeEvaluationPage";
 import SupervisorApprovalsPage from "./pages/SupervisorApprovalsPage";
+import HREvaluationsPage from "./pages/HREvaluationsPage";
 import HRUsersPage from "./pages/HRUsersPage";
 import HRCyclesPage from "./pages/HRCyclesPage";
 import HRCriteriaPage from "./pages/HRCriteriaPage";
@@ -33,6 +34,7 @@ export default function App() {
               </Route>
 
               <Route element={<RoleRoute roles={["hr"]} />}>
+                <Route path="/hr/evaluations" element={<HREvaluationsPage />} />
                 <Route path="/users" element={<HRUsersPage />} />
                 <Route path="/cycles" element={<HRCyclesPage />} />
                 <Route path="/criteria" element={<HRCriteriaPage />} />
