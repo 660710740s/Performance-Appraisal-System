@@ -102,3 +102,129 @@ input { font-family: inherit; }
   .bn-link.active { color: var(--navy); font-weight: 600; }
   .user-info span { display: none; }
 }
+/* =====================================================
+   เพิ่มเติม: สไตล์รวมสำหรับทุกหน้า (ต่อท้ายไฟล์เดิม)
+   ===================================================== */
+
+.content h1 { font-size: 24px; margin: 0 0 16px; color: var(--navy); }
+.content h2 { font-size: 19px; margin: 28px 0 10px; color: var(--navy); }
+.content h3 { font-size: 16px; margin: 20px 0 8px; }
+.content p { line-height: 1.6; }
+.content a { color: var(--navy-light); }
+.content ul { line-height: 1.8; padding-left: 20px; }
+
+/* ---------- ตาราง ---------- */
+.content table {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border) !important;
+  border-radius: 10px;
+  border-collapse: separate !important;
+  border-spacing: 0;
+  overflow: hidden;
+  font-size: 14px;
+  margin-top: 12px;
+}
+.content th {
+  background: #eef0f4;
+  color: var(--navy);
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.content td {
+  padding: 10px 12px;
+  vertical-align: top;
+}
+.content tbody tr { border-top: 0 !important; }
+.content tbody tr:nth-child(even) { background: #fafbfc; }
+.content tbody tr:hover { background: #f1f4fb; }
+.content tbody td { border-top: 1px solid var(--border); }
+.content small { color: var(--muted); }
+
+/* ---------- ฟอร์ม ---------- */
+.content input,
+.content select,
+.content textarea {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+}
+.content input[type="radio"],
+.content input[type="checkbox"] {
+  padding: 0;
+  accent-color: var(--navy);
+}
+.content input:focus,
+.content select:focus,
+.content textarea:focus {
+  outline: none;
+  border-color: var(--navy);
+  box-shadow: 0 0 0 3px rgba(30, 42, 74, 0.12);
+}
+.content input:disabled,
+.content textarea:disabled { background: #f1f2f4; color: var(--muted); }
+.content label { font-size: 14px; color: var(--muted); }
+
+/* ฟอร์มที่เป็นกล่อง (ฟอร์มสร้าง/แก้ไขในแต่ละหน้า) */
+.content form {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px !important;
+}
+.content form h3 { margin-top: 0; }
+
+/* ส่วนที่เป็นกรอบ (section ที่ใส่ border inline) */
+.content section {
+  background: var(--card);
+  border-radius: 10px;
+  border-color: var(--border) !important;
+}
+
+/* ---------- ปุ่ม ---------- */
+.content button {
+  font-size: 13px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--navy);
+  transition: background 0.15s, border-color 0.15s;
+}
+.content button:hover:not(:disabled) { background: #eef0f4; border-color: #cfd4dc; }
+.content button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.content .btn-primary {
+  width: auto;
+  background: var(--navy);
+  color: #fff;
+  border: 1px solid var(--navy);
+  font-size: 14px;
+  padding: 8px 18px;
+}
+.content .btn-primary:hover:not(:disabled) { background: var(--navy-light); border-color: var(--navy-light); }
+
+/* ---------- ข้อความแจ้งผล ---------- */
+.info-box,
+.content > div > p:has(+ table),
+.content > div > p:first-of-type { }
+
+.content .error-box { margin: 12px 0; }
+
+/* ---------- ลิงก์เมนูข้าง ---------- */
+.nav-link { transition: background 0.15s; }
+.nav-link:not(.active):hover { background: #eef0f4; }
+
+/* ---------- มือถือ: ตารางเลื่อนแนวนอนได้ ---------- */
+@media (max-width: 720px) {
+  .content table { display: block; overflow-x: auto; white-space: nowrap; }
+  .content form { max-width: 100% !important; }
+  .content h1 { font-size: 20px; }
+}
