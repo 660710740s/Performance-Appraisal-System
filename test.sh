@@ -3,7 +3,7 @@ for u in employee1 employee2 employee5; do
 
   response=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
     -H "Content-Type: application/json" \
-    -d "{\"email\":\"$u@example.com\",\"password\":\"Password123!\"}")
+    -d "{\"email\":\"$u@example.com\",\"password\":\"test12345\"}")
 
   T=$(echo "$response" | jq -r '.data.token // empty')
   echo "TOKEN: ${T:0:20}..."
