@@ -1,3 +1,4 @@
+import "../redesign.css";
 import { useEffect, useState } from "react";
 import client, { errorMessage } from "../api/client";
 import type { Criteria, Cycle, Evaluation, EvaluationStatus } from "../types";
