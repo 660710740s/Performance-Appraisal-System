@@ -1,7 +1,7 @@
 import "../redesign.css";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import client, { errorMessage } from "../api/client";
-import type { User } from "../types";
+import type { Department, Level, Position, User } from "../types";
 
 type Decision = "pending_approval" | "approved" | "rejected";
 
@@ -45,6 +45,9 @@ export default function HRProposalsPage() {
   const [tab, setTab] = useState<"promotion" | "transfer">("promotion");
   const [evals, setEvals] = useState<EvalRow[]>([]);
   const [users, setUsers] = useState<User[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [levels, setLevels] = useState<Level[]>([]);
+  const [positions, setPositions] = useState<Position[]>([]);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [evaluationId, setEvaluationId] = useState("");
@@ -58,21 +61,27 @@ export default function HRProposalsPage() {
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
-    try {
-      const [p, t, e, u] = await Promise.all([
-        client.get("/hr/promotions"),
-        client.get("/hr/transfers"),
-        client.get("/reports/evaluations", { params: { status: "approved", type: "supervisor", limit: 500 } }),
-        client.get("/users"),
-      ]);
-      setPromotions(p.data.data ?? []);
-      setTransfers(t.data.data ?? []);
-      setEvals(e.data.data ?? []);
-      setUsers(u.data.data ?? []);
-    } catch (err) {
-      setError(errorMessage(err));
-    }
-  }, []);
+  try {
+    const [p, t, e, u, d, l, pos] = await Promise.all([   // ← เพิ่ม pos
+      client.get("/hr/promotions"),
+      client.get("/hr/transfers"),
+      client.get("/reports/evaluations", { params: { status: "approved", type: "supervisor", limit: 500 } }),
+      client.get("/users"),
+      client.get("/departments"),
+      client.get("/levels"),
+      client.get("/positions"),                           // ← เพิ่มบรรทัดนี้
+    ]);
+    setPromotions(p.data.data ?? []);
+    setTransfers(t.data.data ?? []);
+    setEvals(e.data.data ?? []);
+    setUsers(u.data.data ?? []);
+    setDepartments(d.data.data ?? []);
+    setLevels(l.data.data ?? []);
+    setPositions(pos.data.data ?? []);
+  } catch (err) {
+    setError(errorMessage(err));
+  }
+}, []);
 
   useEffect(() => {
     load();
@@ -153,24 +162,35 @@ export default function HRProposalsPage() {
         </label>
         {tab === "promotion" ? (
           <>
-            <label>
-              ตำแหน่งที่เสนอ
-              <input value={toPosition} onChange={(e) => setToPosition(e.target.value)} style={{ display: "block", width: "100%" }} />
-            </label>
+          <label>
+  ตำแหน่งที่เสนอ
+  <select value={toPosition} onChange={(e) => setToPosition(e.target.value)} style={{ display: "block", width: "100%" }}>
+    <option value="">-- เลือก --</option>
+    {positions.map((p) => (
+      <option key={p.id} value={p.name}>{p.name}</option>
+    ))}
+  </select>
+</label>
             <label>
               ระดับที่เสนอ (ไม่บังคับ)
-              <input value={toLevel} onChange={(e) => setToLevel(e.target.value)} style={{ display: "block", width: "100%" }} />
+              <select value={toLevel} onChange={(e) => setToLevel(e.target.value)} style={{ display: "block", width: "100%" }}>
+                <option value="">ไม่ระบุ</option>
+                {levels.map((l) => (
+                  <option key={l.id} value={l.name}>{l.name}</option>
+                ))}
+              </select>
             </label>
           </>
         ) : (
           <>
             <label>
               แผนกปลายทาง
-              <input value={toDepartment} onChange={(e) => setToDepartment(e.target.value)} style={{ display: "block", width: "100%" }} />
-            </label>
-            <label>
-              วันที่มีผล (ไม่บังคับ)
-              <input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} style={{ display: "block" }} />
+              <select value={toDepartment} onChange={(e) => setToDepartment(e.target.value)} style={{ display: "block", width: "100%" }}>
+                <option value="">-- เลือก --</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.name}>{d.name}</option>
+                ))}
+              </select>
             </label>
           </>
         )}

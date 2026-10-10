@@ -1,7 +1,7 @@
 import "../redesign.css";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import client, { errorMessage } from "../api/client";
-import type { Criteria } from "../types";
+import type { Criteria, Department, Level } from "../types";
 
 export default function HRCriteriaPage() {
   const [items, setItems] = useState<Criteria[]>([]);
@@ -12,6 +12,8 @@ export default function HRCriteriaPage() {
   const [rubric, setRubric] = useState("");
   const [department, setDepartment] = useState("");
   const [level, setLevel] = useState("");
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [levels, setLevels] = useState<Level[]>([]);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [busy, setBusy] = useState(false);
@@ -28,6 +30,22 @@ export default function HRCriteriaPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    async function loadOptions() {
+      try {
+        const [d, l] = await Promise.all([
+          client.get("/departments"),
+          client.get("/levels"),
+        ]);
+        setDepartments(d.data.data ?? []);
+        setLevels(l.data.data ?? []);
+      } catch (err) {
+        setError(errorMessage(err));
+      }
+    }
+    loadOptions();
+  }, []);
 
   function resetForm() {
     setEditing(null);
@@ -150,12 +168,28 @@ export default function HRCriteriaPage() {
           <textarea value={rubric} onChange={(e) => setRubric(e.target.value)} rows={2} style={{ display: "block", width: "100%" }} />
         </label>
         <label>
-          ใช้กับแผนก (เว้นว่าง = ทุกแผนก)
-          <input value={department} onChange={(e) => setDepartment(e.target.value)} style={{ display: "block", width: "100%" }} />
+          ใช้กับแผนก
+          <select value={department} onChange={(e) => setDepartment(e.target.value)} style={{ display: "block", width: "100%" }}>
+            <option value="">ทุกแผนก</option>
+            {department && !departments.some((d) => d.name === department) && (
+              <option value={department}>{department} (ไม่อยู่ในรายการ)</option>
+            )}
+            {departments.map((d) => (
+              <option key={d.id} value={d.name}>{d.name}</option>
+            ))}
+          </select>
         </label>
         <label>
-          ใช้กับระดับ (เว้นว่าง = ทุกระดับ เช่น junior)
-          <input value={level} onChange={(e) => setLevel(e.target.value)} style={{ display: "block", width: "100%" }} />
+          ใช้กับระดับ
+          <select value={level} onChange={(e) => setLevel(e.target.value)} style={{ display: "block", width: "100%" }}>
+            <option value="">ทุกระดับ</option>
+            {level && !levels.some((l) => l.name === level) && (
+              <option value={level}>{level} (ไม่อยู่ในรายการ)</option>
+            )}
+            {levels.map((l) => (
+              <option key={l.id} value={l.name}>{l.name}</option>
+            ))}
+          </select>
         </label>
         <div style={{ display: "flex", gap: 8 }}>
           <button type="submit" className="btn-primary" disabled={busy}>
@@ -197,7 +231,7 @@ export default function HRCriteriaPage() {
         </tbody>
       </table>
       {items.length === 0 && <p>ยังไม่มีเกณฑ์ประเมิน</p>}
-      
+
     </div>
   );
 }

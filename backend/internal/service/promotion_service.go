@@ -31,6 +31,24 @@ func (s *PromotionService) Create(by uint, in CreatePromotionInput) (*domain.Pro
 	if toPosition == "" {
 		return nil, domain.ErrInvalidInput
 	}
+	posOK, err := s.evals.PositionExists(toPosition)
+	if err != nil {
+		return nil, err
+	}
+	if !posOK {
+		return nil, domain.ErrInvalidInput
+	}
+	// ระดับไม่บังคับ แต่ถ้ากรอกต้องอยู่ในรายการหลัก
+	toLevel := strings.TrimSpace(in.ToLevel)
+	if toLevel != "" {
+		ok, err := s.evals.LevelExists(toLevel)
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
+			return nil, domain.ErrInvalidInput
+		}
+	}
 	e, err := s.evals.GetEvaluation(in.EvaluationID)
 	if err != nil {
 		return nil, err
@@ -50,7 +68,7 @@ func (s *PromotionService) Create(by uint, in CreatePromotionInput) (*domain.Pro
 	p := &domain.PromotionRequest{
 		EvaluationID: e.ID, CycleID: e.CycleID, EmployeeID: e.EmployeeID,
 		FromPosition: emp.Position, FromLevel: emp.Level,
-		ToPosition: toPosition, ToLevel: strings.TrimSpace(in.ToLevel),
+		ToPosition: toPosition, ToLevel: toLevel,
 		Status: domain.CareerStatusPending, Note: in.Note, CreatedBy: by,
 	}
 	if err := s.promos.CreatePromotion(p); err != nil {

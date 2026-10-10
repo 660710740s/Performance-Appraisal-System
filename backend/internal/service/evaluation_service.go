@@ -63,6 +63,8 @@ func (s *EvaluationService) ListCycles() ([]domain.EvaluationCycle, error) {
 	return s.evals.ListCycles()
 }
 func (s *EvaluationService) CreateCriteria(userID uint, role domain.Role, c *domain.Criteria) error {
+	c.Department = strings.TrimSpace(c.Department) // NEW
+	c.Level = strings.TrimSpace(c.Level)           // NEW
 	// หัวหน้าสร้างได้เฉพาะเกณฑ์ของแผนกตัวเอง
 	if role == domain.RoleManager {
 		u, err := s.users.GetByID(userID)
@@ -73,6 +75,11 @@ func (s *EvaluationService) CreateCriteria(userID uint, role domain.Role, c *dom
 			return domain.ErrForbidden
 		}
 		c.Department = u.Department
+	} else if err := s.validateDepartment(c.Department); err != nil { // NEW
+		return err
+	}
+	if err := s.validateLevel(c.Level); err != nil { // NEW
+		return err
 	}
 	c.IsActive = true
 	return s.evals.CreateCriteria(c)
@@ -134,11 +141,17 @@ func (s *EvaluationService) UpdateCriteria(id uint, in UpdateCriteriaInput) (*do
 		return nil, err
 	}
 	dept, level := c.Department, c.Level
-	if in.Department != nil {
-		dept = *in.Department
+		if in.Department != nil {
+		dept = strings.TrimSpace(*in.Department) // แก้จาก dept = *in.Department
+		if err := s.validateDepartment(dept); err != nil { // NEW
+			return nil, err
+		}
 	}
 	if in.Level != nil {
-		level = *in.Level
+		level = strings.TrimSpace(*in.Level)
+		if err := s.validateLevel(level); err != nil { // NEW
+			return nil, err
+		}
 	}
 	// แก้น้ำหนัก/สถานะ/แผนก/ระดับได้เฉพาะตอนยังไม่มีแบบประเมินในระบบ
 	if in.Weight != c.Weight || in.IsActive != c.IsActive || dept != c.Department || level != c.Level {
@@ -486,4 +499,43 @@ func (s *EvaluationService) ListCriteriaForUser(userID uint, role domain.Role, e
 		return nil, domain.ErrForbidden
 	}
 	return s.evals.ListCriteriaFor(emp.Department, emp.Level)
+}
+func (s *EvaluationService) ListDepartments() ([]domain.Department, error) {
+	return s.evals.ListDepartments()
+}
+
+func (s *EvaluationService) ListLevels() ([]domain.Level, error) {
+	return s.evals.ListLevels()
+}
+
+// ค่าว่าง = ทุกแผนก/ทุกระดับ จึงผ่านเสมอ ถ้ามีค่าต้องอยู่ในรายการหลัก
+func (s *EvaluationService) validateDepartment(name string) error {
+	if name == "" {
+		return nil
+	}
+	ok, err := s.evals.DepartmentExists(name)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return domain.ErrInvalidInput
+	}
+	return nil
+}
+
+func (s *EvaluationService) validateLevel(name string) error {
+	if name == "" {
+		return nil
+	}
+	ok, err := s.evals.LevelExists(name)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return domain.ErrInvalidInput
+	}
+	return nil
+}
+func (s *EvaluationService) ListPositions() ([]domain.Position, error) {
+	return s.evals.ListPositions()
 }

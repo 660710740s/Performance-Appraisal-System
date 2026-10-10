@@ -31,6 +31,14 @@ func (s *TransferService) Create(by uint, in CreateTransferInput) (*domain.Trans
 	if toDept == "" {
 		return nil, domain.ErrInvalidInput
 	}
+	// แผนกปลายทางต้องอยู่ในรายการหลัก
+	deptOK, err := s.evals.DepartmentExists(toDept)
+	if err != nil {
+		return nil, err
+	}
+	if !deptOK {
+		return nil, domain.ErrInvalidInput
+	}
 	e, err := s.evals.GetEvaluation(in.EvaluationID)
 	if err != nil {
 		return nil, err

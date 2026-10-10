@@ -132,3 +132,38 @@ func (r *evaluationRepository) ListCriteriaFor(department, level string) ([]doma
 		Order("id").Find(&out).Error
 	return out, err
 }
+
+func (r *evaluationRepository) ListDepartments() ([]domain.Department, error) {
+	var out []domain.Department
+	err := r.db.Order("name").Find(&out).Error
+	return out, err
+}
+
+func (r *evaluationRepository) ListLevels() ([]domain.Level, error) {
+	var out []domain.Level
+	err := r.db.Order("sort_order, id").Find(&out).Error
+	return out, err
+}
+
+func (r *evaluationRepository) DepartmentExists(name string) (bool, error) {
+	var n int64
+	err := r.db.Model(&domain.Department{}).Where("name = ?", name).Count(&n).Error
+	return n > 0, err
+}
+
+func (r *evaluationRepository) LevelExists(name string) (bool, error) {
+	var n int64
+	err := r.db.Model(&domain.Level{}).Where("name = ?", name).Count(&n).Error
+	return n > 0, err
+}
+func (r *evaluationRepository) ListPositions() ([]domain.Position, error) {
+	var out []domain.Position
+	err := r.db.Order("name").Find(&out).Error
+	return out, err
+}
+
+func (r *evaluationRepository) PositionExists(name string) (bool, error) {
+	var n int64
+	err := r.db.Model(&domain.Position{}).Where("name = ?", name).Count(&n).Error
+	return n > 0, err
+}

@@ -36,6 +36,10 @@ func SetupRouter(jwtSecret string, auth *AuthHandler, user *UserHandler, eval *E
 		authed.POST("/criteria", middleware.RequireRoles(domain.RoleHR, domain.RoleManager), eval.CreateCriteria)
 		authed.PUT("/criteria/:id", middleware.RequireRoles(domain.RoleHR), eval.UpdateCriteria)
 
+		authed.GET("/departments", eval.ListDepartments)
+		authed.GET("/levels", eval.ListLevels)
+		authed.GET("/positions", eval.ListPositions)
+
 		// evaluations
 		mgr := middleware.RequireRoles(domain.RoleManager, domain.RoleHR)
 		authed.POST("/evaluations", eval.Create)

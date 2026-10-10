@@ -1,0 +1,9 @@
+CREATE TABLE IF NOT EXISTS positions (
+    id   SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE
+);
+
+INSERT INTO positions (name)
+SELECT DISTINCT TRIM(position) FROM users
+WHERE position IS NOT NULL AND TRIM(position) <> ''
+ON CONFLICT (name) DO NOTHING;

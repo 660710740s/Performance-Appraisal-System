@@ -314,3 +314,29 @@ func (h *EvaluationHandler) ListGiven(c *gin.Context) {
 	}
 	response.OK(c, out)
 }
+
+func (h *EvaluationHandler) ListDepartments(c *gin.Context) {
+	out, err := h.svc.ListDepartments()
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, out)
+}
+
+func (h *EvaluationHandler) ListLevels(c *gin.Context) {
+	out, err := h.svc.ListLevels()
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, out)
+}
+func (h *EvaluationHandler) ListPositions(c *gin.Context) {
+	out, err := h.svc.ListPositions()
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, out)
+}

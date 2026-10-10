@@ -34,6 +34,17 @@ export interface Criteria {
   is_active?: boolean;
 }
 
+export interface Department {
+  id: number;
+  name: string;
+}
+
+export interface Level {
+  id: number;
+  name: string;
+  sort_order: number;
+}
+
 export interface Score {
   criteria_id: number;
   score: number;
@@ -57,4 +68,9 @@ export interface Evaluation {
 
 export interface ApiError {
   error: string;
+}
+
+export interface Position {
+  id: number;
+  name: string;
 }

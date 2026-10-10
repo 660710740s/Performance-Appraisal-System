@@ -37,6 +37,18 @@ type Criteria struct {
 	Level       string  `gorm:"size:50" json:"level"`
 }
 
+// รายการหลักสำหรับ dropdown
+type Department struct {
+	ID   uint   `gorm:"primaryKey" json:"id"`
+	Name string `gorm:"size:100;not null;uniqueIndex" json:"name"`
+}
+
+type Level struct {
+	ID        uint   `gorm:"primaryKey" json:"id"`
+	Name      string `gorm:"size:50;not null;uniqueIndex" json:"name"`
+	SortOrder int    `gorm:"not null;default:0" json:"sort_order"`
+}
+
 type Evaluation struct {
 	ID               uint              `gorm:"primaryKey" json:"id"`
 	CycleID          uint              `gorm:"not null;uniqueIndex:idx_cycle_employee_type" json:"cycle_id"`
@@ -72,8 +84,16 @@ type EvaluationRepository interface {
 	CreateCriteria(c *Criteria) error
 	ListCriteria() ([]Criteria, error)
 	ListCriteriaFor(department, level string) ([]Criteria, error)
+	ListPositions() ([]Position, error)
+	PositionExists(name string) (bool, error)
 	GetCriteria(id uint) (*Criteria, error)
 	UpdateCriteria(c *Criteria) error
+
+	// ใน type EvaluationRepository interface { ... } เพิ่ม
+	ListDepartments() ([]Department, error)
+	ListLevels() ([]Level, error)
+	DepartmentExists(name string) (bool, error)
+	LevelExists(name string) (bool, error)
 
 	CreateEvaluation(e *Evaluation) error
 	GetEvaluation(id uint) (*Evaluation, error)
@@ -96,4 +116,8 @@ type AuditLog struct {
 	EntityID  uint      `gorm:"index" json:"entity_id"`
 	Detail    string    `json:"detail"`
 	CreatedAt time.Time `json:"created_at"`
+}
+type Position struct {
+	ID   uint   `gorm:"primaryKey" json:"id"`
+	Name string `gorm:"size:100;not null;uniqueIndex" json:"name"`
 }
