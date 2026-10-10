@@ -16,3 +16,4 @@ tmp/
 .vscode/
 .idea/
 .DS_Store
+appraisal_test_backup.sql
