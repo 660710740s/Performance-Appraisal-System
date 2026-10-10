@@ -1,3 +1,4 @@
+import "../redesign.css";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import client, { errorMessage } from "../api/client";
 import type { Criteria } from "../types";

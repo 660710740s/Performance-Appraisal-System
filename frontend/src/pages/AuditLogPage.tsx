@@ -1,3 +1,4 @@
+import "../redesign.css";
 import { useCallback, useEffect, useState } from "react";
 import client, { errorMessage } from "../api/client";
 import type { User } from "../types";

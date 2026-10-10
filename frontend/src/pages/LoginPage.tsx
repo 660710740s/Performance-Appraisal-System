@@ -1,3 +1,4 @@
+import "../redesign.css";
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
