@@ -31,7 +31,7 @@ func (h *EvaluationHandler) CreateCycle(c *gin.Context) {
 		return
 	}
 	cycle := &domain.EvaluationCycle{Name: req.Name, StartDate: req.StartDate, EndDate: req.EndDate}
-	if err := h.svc.CreateCycle(cycle); err != nil {
+	if err := h.svc.CreateCycle(middleware.UserID(c), cycle); err != nil {
 		response.Error(c, err)
 		return
 	}
@@ -99,7 +99,7 @@ func (h *EvaluationHandler) UpdateCycle(c *gin.Context) {
 		response.BadRequest(c, err)
 		return
 	}
-	out, err := h.svc.UpdateCycle(uint(id), service.UpdateCycleInput{
+	out, err := h.svc.UpdateCycle(middleware.UserID(c), uint(id), service.UpdateCycleInput{
 		Name: req.Name, StartDate: req.StartDate, EndDate: req.EndDate, Status: req.Status,
 	})
 	if err != nil {

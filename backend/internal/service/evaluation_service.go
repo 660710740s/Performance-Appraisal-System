@@ -35,10 +35,29 @@ func NewEvaluationService(evals domain.EvaluationRepository, users domain.UserRe
 	return &EvaluationService{evals: evals, users: users}
 }
 
+// รอบต้องเปิดอยู่ และวันนี้ต้องอยู่ในช่วงวันเริ่มถึงวันสิ้นสุด (นับถึงสิ้นวันของวันสิ้นสุด ตามเวลา UTC)
+func cycleAcceptsEvaluation(c *domain.EvaluationCycle, now time.Time) bool {
+	if c.Status != domain.CycleStatusOpen {
+		return false
+	}
+	end := c.EndDate.UTC()
+	endExclusive := time.Date(end.Year(), end.Month(), end.Day()+1, 0, 0, 0, 0, time.UTC)
+	return !now.Before(c.StartDate) && now.Before(endExclusive)
+}
+
 // ---- Cycle / Criteria ----
-func (s *EvaluationService) CreateCycle(c *domain.EvaluationCycle) error {
+func (s *EvaluationService) CreateCycle(userID uint, c *domain.EvaluationCycle) error {
+	if !c.EndDate.After(c.StartDate) {
+		return domain.ErrInvalidInput
+	}
 	c.Status = domain.CycleStatusOpen
-	return s.evals.CreateCycle(c)
+	if err := s.evals.CreateCycle(c); err != nil {
+		return err
+	}
+	s.evals.CreateAuditLog(&domain.AuditLog{
+		UserID: userID, Action: "create", Entity: "cycle", EntityID: c.ID, Detail: "สร้างรอบ " + c.Name,
+	})
+	return nil
 }
 func (s *EvaluationService) ListCycles() ([]domain.EvaluationCycle, error) {
 	return s.evals.ListCycles()
@@ -69,7 +88,7 @@ type UpdateCycleInput struct {
 	Status    string // ว่าง = ไม่เปลี่ยนสถานะ
 }
 
-func (s *EvaluationService) UpdateCycle(id uint, in UpdateCycleInput) (*domain.EvaluationCycle, error) {
+func (s *EvaluationService) UpdateCycle(userID, id uint, in UpdateCycleInput) (*domain.EvaluationCycle, error) {
 	c, err := s.evals.GetCycle(id)
 	if err != nil {
 		return nil, err
@@ -89,6 +108,13 @@ func (s *EvaluationService) UpdateCycle(id uint, in UpdateCycleInput) (*domain.E
 	if err := s.evals.UpdateCycle(c); err != nil {
 		return nil, err
 	}
+	action := "update"
+	if in.Status == domain.CycleStatusClosed {
+		action = "close"
+	}
+	s.evals.CreateAuditLog(&domain.AuditLog{
+		UserID: userID, Action: action, Entity: "cycle", EntityID: c.ID, Detail: c.Name,
+	})
 	return c, nil
 }
 
@@ -181,7 +207,7 @@ func (s *EvaluationService) Create(evaluatorID uint, role domain.Role, in Create
 	if err != nil {
 		return nil, err
 	}
-	if cycle.Status != domain.CycleStatusOpen {
+	if !cycleAcceptsEvaluation(cycle, time.Now()) {
 		return nil, domain.ErrInvalidInput
 	}
 
@@ -255,7 +281,7 @@ func (s *EvaluationService) UpdateDraft(id, userID uint, in UpdateEvaluationInpu
 	if err != nil {
 		return nil, err
 	}
-	if cycle.Status != domain.CycleStatusOpen {
+	if !cycleAcceptsEvaluation(cycle, time.Now()) {
 		return nil, domain.ErrInvalidInput
 	}
 	emp, err := s.users.GetByID(e.EmployeeID)
@@ -293,7 +319,7 @@ func (s *EvaluationService) Submit(id, evaluatorID uint, role domain.Role) (*dom
 	if err != nil {
 		return nil, err
 	}
-	if cycle.Status != domain.CycleStatusOpen {
+	if !cycleAcceptsEvaluation(cycle, time.Now()) {
 		return nil, domain.ErrInvalidInput
 	}
 	now := time.Now()
