@@ -348,10 +348,8 @@ manager (เฉพาะลูกทีมโดยตรง) และ hr ส�
 - เปลี่ยนสถานะได้เฉพาะ `planned` → `in_progress` หรือ `cancelled` และ `in_progress` → `completed` หรือ `cancelled` นอกนั้นได้ 409, ค่าสถานะที่ไม่รู้จักได้ 400
 - แก้ไขแผนที่ `completed` หรือ `cancelled` แล้วไม่ได้ (409)
 
-## ยังไม่มี API
-
-โอนย้ายและแผนฝึกอบรม มีตารางในฐานข้อมูลแล้ว (`transfer_requests`, `training_plans`) แต่ยังไม่มี endpoint
-
 ## บัญชีทดสอบ (จาก `go run ./cmd/seed`)
 
 hr@, executive@, accounting@, manager1-2@, employee1-6@ (โดเมน example.com) รหัสผ่านคือค่า `SEED_PASSWORD` ที่ตั้งตอนรัน seed
+
+ตัวอย่าง: `SEED_PASSWORD=test12345 go run ./cmd/seed` แล้วล็อกอินด้วย `hr@example.com` / `test12345`
