@@ -159,10 +159,16 @@ export default function ReportsPage() {
         </>
       )}
 
-      <h2 style={{ marginTop: 32 }}>รายงานประจำปี</h2>
       <label>
-        ปี (ค.ศ.){" "}
-        <input type="number" value={year} onChange={(e) => setYear(e.target.value)} style={{ width: 100 }} />
+        ปี (พ.ศ.){" "}
+        <input
+          type="number"
+          value={year ? Number(year) + 543 : ""}
+          onChange={(e) =>
+            setYear(e.target.value ? String(Number(e.target.value) - 543) : "")
+          }
+          style={{ width: 100 }}
+        />
       </label>
 
       {annual && (

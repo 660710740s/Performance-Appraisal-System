@@ -16,6 +16,8 @@ interface LogRow {
 
 const PAGE_SIZE = 50;
 
+
+
 export default function AuditLogPage() {
   const [rows, setRows] = useState<LogRow[]>([]);
   const [users, setUsers] = useState<User[]>([]);

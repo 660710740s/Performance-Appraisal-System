@@ -324,8 +324,9 @@ export default function DashboardPage() {
           display: "flex",
           flexWrap: "wrap",
           justifyContent: "space-between",
-          alignItems: "end",
+          alignItems: "center",
           gap: 12,
+          padding: "18px 24px",
           marginBottom: 14,
         }}
       >
