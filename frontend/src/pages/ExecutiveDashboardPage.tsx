@@ -30,6 +30,27 @@ const STATUS_LABEL = {
 
 const money = (n: number) => n.toLocaleString("th-TH");
 
+const BONUS_STATUS = [
+  { key: "pending_approval", label: "รออนุมัติ", color: "#c2410c" },
+  { key: "approved", label: "อนุมัติแล้ว", color: "#15803d" },
+  { key: "rejected", label: "ไม่อนุมัติ", color: "#be123c" },
+];
+
+function Bar({ pct, color = "#2563eb" }: { pct: number; color?: string }) {
+  return (
+    <div style={{ height: 10, borderRadius: 99, background: "#e8eef9", overflow: "hidden" }}>
+      <div
+        style={{
+          width: `${Math.max(0, Math.min(100, pct))}%`,
+          height: "100%",
+          borderRadius: 99,
+          background: color,
+        }}
+      />
+    </div>
+  );
+}
+
 export default function ExecutiveDashboardPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [bonuses, setBonuses] = useState<Bonus[]>([]);
@@ -76,7 +97,7 @@ export default function ExecutiveDashboardPage() {
   }, [load]);
 
   const cycleName = (id: number) => cycles.find((c) => c.id === id)?.name ?? `รอบ #${id}`;
-  const pendingCount = summary?.bonuses?.find((b) => b.status === "pending_approval")?.count ?? 0;
+
 
   async function decide(id: number, action: "approve" | "reject") {
     setError("");
@@ -101,27 +122,71 @@ export default function ExecutiveDashboardPage() {
       {error && <div className="error-box">{error}</div>}
 
       {summary && (
-        <section>
-          <p>โบนัสรออนุมัติ: <strong>{pendingCount}</strong> รายการ</p>
+        <section style={{ padding: "20px 24px", marginBottom: 24 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+              gap: 14,
+              marginBottom: 28,
+            }}
+          >
+            {BONUS_STATUS.map((s) => {
+              const row = (summary.bonuses ?? []).find((b) => b.status === s.key);
+              return (
+                <div
+                  key={s.key}
+                  style={{
+                    padding: 18,
+                    border: "1px solid #e7ebf2",
+                    borderTop: `4px solid ${s.color}`,
+                    borderRadius: 14,
+                    background: "#fff",
+                  }}
+                >
+                  <div style={{ fontSize: 12, color: "#667085" }}>โบนัส{s.label}</div>
+                  <div style={{ fontSize: 28, fontWeight: 800, margin: "6px 0 2px" }}>
+                    {row?.count ?? 0} <span style={{ fontSize: 13, fontWeight: 500 }}>รายการ</span>
+                  </div>
+                  <div style={{ fontSize: 13, color: s.color }}>
+                    รวม {money(row?.total_amount ?? 0)} บาท
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
           <h3>คะแนนเฉลี่ยตามแผนก</h3>
           {(summary.departments ?? []).length === 0 && <p>ยังไม่มีข้อมูล</p>}
-          <ul>
+          <div style={{ display: "grid", gap: 12, marginBottom: 28 }}>
             {(summary.departments ?? []).map((d) => (
-              <li key={d.department}>
-                {d.department}: {d.avg_score.toFixed(2)} ({d.employee_count} คน)
-              </li>
+              <div key={d.department}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                  <span>{d.department} <small>({d.employee_count} คน)</small></span>
+                  <strong>{d.avg_score.toFixed(2)} / 5</strong>
+                </div>
+                <Bar pct={(d.avg_score / 5) * 100} />
+              </div>
             ))}
-          </ul>
+          </div>
 
           <h3>ความคืบหน้าแต่ละรอบ</h3>
-          <ul>
-            {(summary.progress ?? []).map((p) => (
-              <li key={p.cycle_id}>
-                {p.cycle_name}: อนุมัติแล้ว {p.approved} จาก {p.total_people} คน
-              </li>
-            ))}
-          </ul>
+          <div style={{ display: "grid", gap: 12 }}>
+            {(summary.progress ?? []).map((p) => {
+              const pct = p.total_people ? (p.approved / p.total_people) * 100 : 0;
+              return (
+                <div key={p.cycle_id}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+                    <span>{p.cycle_name}</span>
+                    <span>
+                      อนุมัติแล้ว {p.approved} จาก {p.total_people} คน ({Math.round(pct)}%)
+                    </span>
+                  </div>
+                  <Bar pct={pct} color="#0f766e" />
+                </div>
+              );
+            })}
+          </div>
         </section>
       )}
 
@@ -150,8 +215,8 @@ export default function ExecutiveDashboardPage() {
             <th>พนักงาน</th>
             <th>เงินเดือน</th>
             <th>คะแนน</th>
-            <th>ระบบเสนอ</th>
-            <th>ยอดที่ขออนุมัติ</th>
+            <th>ยอดที่ระบบเสนอ</th>
+            <th>ยอดที่ฝ่ายบัญชียืนยัน</th>
             <th>สถานะ</th>
             <th></th>
           </tr>
