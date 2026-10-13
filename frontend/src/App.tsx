@@ -19,6 +19,7 @@ import AccountingBonusPage from "./pages/AccountingBonusPage";
 import ExecutiveDashboardPage from "./pages/ExecutiveDashboardPage";
 import ExecutiveProposalsPage from "./pages/ExecutiveProposalsPage";
 import ReportsPage from "./pages/ReportsPage";
+import HRBonusPage from "./pages/HRBonusPage";
 
 export default function App() {
   return (
@@ -46,6 +47,7 @@ export default function App() {
               <Route element={<RoleRoute roles={["hr"]} />}>
                 <Route path="/hr/evaluations" element={<HREvaluationsPage />} />
                 <Route path="/hr/proposals" element={<HRProposalsPage />} />
+                <Route path="/hr/bonus" element={<HRBonusPage />} />
                 <Route path="/users" element={<HRUsersPage />} />
                 <Route path="/cycles" element={<HRCyclesPage />} />
                 <Route path="/criteria" element={<HRCriteriaPage />} />

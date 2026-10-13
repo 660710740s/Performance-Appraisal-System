@@ -100,11 +100,9 @@ export default function AccountingBonusPage() {
   const loadBonus = useCallback(async () => {
     if (!cycleId) return;
     try {
-      const [c, b] = await Promise.all([
-        client.get("/accounting/bonus-candidates", { params: { cycle_id: cycleId } }),
-        client.get("/accounting/bonuses", { params: { cycle_id: cycleId } }),
-      ]);
-      setCandidates(c.data.data ?? []);
+      const b = await client.get("/accounting/bonuses", {
+        params: { cycle_id: cycleId, status: "approved" },
+      });
       setBonuses(b.data.data ?? []);
     } catch (err) {
       setError(errorMessage(err));
