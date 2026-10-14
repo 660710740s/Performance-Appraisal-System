@@ -1,4 +1,5 @@
 import "../redesign.css";
+import Drawer from "../components/Drawer";
 import { useCallback, useEffect, useState } from "react";
 import client, { errorMessage } from "../api/client";
 import type { Criteria, Cycle, Evaluation, EvaluationStatus, Score, User } from "../types";
@@ -237,80 +238,13 @@ export default function SupervisorApprovalsPage() {
         </section>
       ))}
 
-      {formFor && (
-        <section style={{ margin: "24px 0", padding: 16, border: "2px solid #888" }}>
-          <h2>ประเมิน {formFor.name}</h2>
-          <label>
-            รอบประเมิน{" "}
-            <select value={formCycle ?? ""} onChange={(e) => setFormCycle(Number(e.target.value))}>
-              {cycles.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} {c.status === "closed" ? "(ปิดแล้ว)" : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-          {existing && <p>สถานะแบบนี้: {STATUS_LABEL[existing.status]}</p>}
-          {!cycleOpen && <p>รอบนี้ปิดแล้ว ดูได้อย่างเดียว</p>}
-
-          {criteria.map((c) => (
-            <div key={c.id} style={{ margin: "14px 0" }}>
-              <strong>{c.name}</strong> <small>(น้ำหนัก {c.weight})</small>
-              {autoLocked(c) ? (
-                <div>
-                  <div><small>คำนวณอัตโนมัติจากข้อมูลงาน</small></div>
-                  {saved[c.id] ? (
-                    <div>
-                      {saved[c.id].detail} → คะแนน <strong>{saved[c.id].score}</strong> / 5
-                    </div>
-                  ) : (
-                    <div>
-                      <small>{canEdit ? "ระบบจะคำนวณให้เมื่อกดบันทึกร่าง" : "-"}</small>
-                    </div>
-                  )}
-                  <input
-                    placeholder="หมายเหตุ (ไม่บังคับ)"
-                    value={notes[c.id] ?? ""}
-                    disabled={!canEdit}
-                    onChange={(e) => setNotes({ ...notes, [c.id]: e.target.value })}
-                    style={{ display: "block", width: "100%", marginTop: 4 }}
-                  />
-                </div>
-              ) : (
-                <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 6 }}>
-                  {[1, 2, 3, 4, 5].map((n) => (
-                    <label
-                      key={n}
-                      style={{ display: "inline-flex", flexDirection: "row", alignItems: "center", gap: 6, margin: 0, cursor: "pointer" }}
-                    >
-                      <input
-                        type="radio"
-                        name={`s-${c.id}`}
-                        checked={scores[c.id] === n}
-                        disabled={!canEdit}
-                        onChange={() => setScores({ ...scores, [c.id]: n })}
-                        style={{ width: "auto", margin: 0, padding: 0 }}
-                      />
-                      {n}
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-
-          <label>
-            ความเห็นหัวหน้า
-            <textarea
-              value={comment}
-              disabled={!canEdit}
-              onChange={(e) => setComment(e.target.value)}
-              rows={4}
-              style={{ display: "block", width: "100%" }}
-            />
-          </label>
-
-          <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+      <Drawer
+        open={!!formFor}
+        title={formFor ? `ประเมิน ${formFor.name}` : ""}
+        onClose={() => setFormFor(null)}
+        footer={
+          <>
+            <button onClick={() => setFormFor(null)}>ปิดฟอร์ม</button>
             {canEdit && (
               <>
                 <button onClick={() => saveForm(false)} disabled={busy}>บันทึกร่าง</button>
@@ -319,10 +253,82 @@ export default function SupervisorApprovalsPage() {
                 </button>
               </>
             )}
-            <button onClick={() => setFormFor(null)}>ปิดฟอร์ม</button>
+          </>
+        }
+      >
+        {error && <div className="error-box">{error}</div>}
+        {info && <p>{info}</p>}
+
+        <label>
+          รอบประเมิน{" "}
+          <select value={formCycle ?? ""} onChange={(e) => setFormCycle(Number(e.target.value))}>
+            {cycles.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name} {c.status === "closed" ? "(ปิดแล้ว)" : ""}
+              </option>
+            ))}
+          </select>
+        </label>
+        {existing && <p>สถานะแบบนี้: {STATUS_LABEL[existing.status]}</p>}
+        {!cycleOpen && <p>รอบนี้ปิดแล้ว ดูได้อย่างเดียว</p>}
+
+        {criteria.map((c) => (
+          <div key={c.id} style={{ margin: "14px 0" }}>
+            <strong>{c.name}</strong> <small>(น้ำหนัก {c.weight})</small>
+            {autoLocked(c) ? (
+              <div>
+                <div><small>คำนวณอัตโนมัติจากข้อมูลงาน</small></div>
+                {saved[c.id] ? (
+                  <div>
+                    {saved[c.id].detail} → คะแนน <strong>{saved[c.id].score}</strong> / 5
+                  </div>
+                ) : (
+                  <div>
+                    <small>{canEdit ? "ระบบจะคำนวณให้เมื่อกดบันทึกร่าง" : "-"}</small>
+                  </div>
+                )}
+                <input
+                  placeholder="หมายเหตุ (ไม่บังคับ)"
+                  value={notes[c.id] ?? ""}
+                  disabled={!canEdit}
+                  onChange={(e) => setNotes({ ...notes, [c.id]: e.target.value })}
+                  style={{ display: "block", width: "100%", marginTop: 4 }}
+                />
+              </div>
+            ) : (
+              <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 6 }}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <label
+                    key={n}
+                    style={{ display: "inline-flex", flexDirection: "row", alignItems: "center", gap: 6, margin: 0, cursor: "pointer" }}
+                  >
+                    <input
+                      type="radio"
+                      name={`s-${c.id}`}
+                      checked={scores[c.id] === n}
+                      disabled={!canEdit}
+                      onChange={() => setScores({ ...scores, [c.id]: n })}
+                      style={{ width: "auto", margin: 0, padding: 0 }}
+                    />
+                    {n}
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
-        </section>
-      )}
+        ))}
+
+        <label>
+          ความเห็นหัวหน้า
+          <textarea
+            value={comment}
+            disabled={!canEdit}
+            onChange={(e) => setComment(e.target.value)}
+            rows={4}
+            style={{ display: "block", width: "100%" }}
+          />
+        </label>
+      </Drawer>
     </div>
   );
 }
