@@ -204,7 +204,7 @@ func (s *EvaluationService) buildScores(emp *domain.User, cycle *domain.Evaluati
 		if _, ok := byID[sc.CriteriaID]; !ok {
 			return nil, 0, domain.ErrInvalidInput
 		}
-		if _, dup := given[sc.CriteriaID]; dup || sc.Score < 1 || sc.Score > 5 {
+		if _, dup := given[sc.CriteriaID]; dup || sc.Score < 0 || sc.Score > 5 {
 			return nil, 0, domain.ErrInvalidInput
 		}
 		given[sc.CriteriaID] = sc
@@ -228,7 +228,7 @@ func (s *EvaluationService) buildScores(emp *domain.User, cycle *domain.Evaluati
 			}
 		} else {
 			sc, has := given[c.ID]
-			if !has {
+			if !has || sc.Score < 1 {
 				return nil, 0, domain.ErrInvalidInput // เกณฑ์ที่ระบบคำนวณให้ไม่ได้ ต้องกรอกเอง
 			}
 			row.Score, row.Comment = sc.Score, sc.Comment

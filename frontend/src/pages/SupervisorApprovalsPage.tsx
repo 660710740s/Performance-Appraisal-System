@@ -1,7 +1,7 @@
 import "../redesign.css";
 import { useCallback, useEffect, useState } from "react";
 import client, { errorMessage } from "../api/client";
-import type { Criteria, Cycle, Evaluation, EvaluationStatus, User } from "../types";
+import type { Criteria, Cycle, Evaluation, EvaluationStatus, Score, User } from "../types";
 
 interface HistoryItem {
   id: number;
@@ -39,6 +39,8 @@ export default function SupervisorApprovalsPage() {
   const [existing, setExisting] = useState<HistoryItem | null>(null);
   const [scores, setScores] = useState<Record<number, number>>({});
   const [comment, setComment] = useState("");
+  const [saved, setSaved] = useState<Record<number, Score>>({}); // แถวคะแนนที่บันทึกไว้ (มีรายละเอียดของข้อ auto)
+  const [notes, setNotes] = useState<Record<number, string>>({}); // หมายเหตุของข้อ auto
 
   const load = useCallback(async () => {
     try {
@@ -68,6 +70,8 @@ export default function SupervisorApprovalsPage() {
       setScores({});
       setComment("");
       setExisting(null);
+      setSaved({});
+      setNotes({});
       if (!formFor || formCycle === null) return;
       try {
         const k = await client.get(`/criteria?employee_id=${formFor.id}`);
@@ -77,14 +81,20 @@ export default function SupervisorApprovalsPage() {
         );
         if (found) {
           setExisting(found);
-          if (found.status === "draft" || found.status === "rejected") {
-            const d = await client.get(`/evaluations/${found.id}`);
-            const detail: Evaluation = d.data.data;
-            setComment(detail.comment ?? "");
-            const map: Record<number, number> = {};
-            (detail.scores ?? []).forEach((s) => (map[s.criteria_id] = s.score));
-            setScores(map);
-          }
+          const d = await client.get(`/evaluations/${found.id}`);
+          const detail: Evaluation = d.data.data;
+          setComment(detail.comment ?? "");
+          const map: Record<number, number> = {};
+          const rows: Record<number, Score> = {};
+          const nts: Record<number, string> = {};
+          (detail.scores ?? []).forEach((s) => {
+            map[s.criteria_id] = s.score;
+            rows[s.criteria_id] = s;
+            nts[s.criteria_id] = s.comment ?? "";
+          });
+          setScores(map);
+          setSaved(rows);
+          setNotes(nts);
         }
       } catch (err) {
         setError(errorMessage(err));
@@ -131,17 +141,26 @@ export default function SupervisorApprovalsPage() {
   const canEdit =
     cycleOpen && (!existing || existing.status === "draft" || existing.status === "rejected");
 
+  const isAuto = (c: Criteria) => (c.source ?? "").startsWith("auto_");
+  // ข้อ auto ที่ระบบคำนวณให้ (ถ้าแถวที่บันทึกไว้เป็น manual แปลว่าข้อมูลงานไม่พอ ต้องกรอกเอง)
+  const autoLocked = (c: Criteria) => isAuto(c) && saved[c.id]?.source !== "manual";
+
   async function saveForm(submit: boolean) {
     setError("");
     setInfo("");
     if (!formFor || formCycle === null) return;
-    if (criteria.length === 0 || criteria.some((c) => !scores[c.id])) {
-      setError("กรุณาให้คะแนนครบทุกเกณฑ์");
+    const manual = criteria.filter((c) => !autoLocked(c));
+    if (criteria.length === 0 || manual.some((c) => !scores[c.id])) {
+      setError("กรุณาให้คะแนนครบทุกเกณฑ์ (ข้อที่ระบบคำนวณให้ไม่ต้องกรอก)");
       return;
     }
     const payload = {
       comment,
-      scores: criteria.map((c) => ({ criteria_id: c.id, score: scores[c.id], comment: "" })),
+      scores: criteria.map((c) =>
+        autoLocked(c)
+          ? { criteria_id: c.id, comment: notes[c.id] ?? "" }
+          : { criteria_id: c.id, score: scores[c.id], comment: "" }
+      ),
     };
     setBusy(true);
     try {
@@ -237,20 +256,46 @@ export default function SupervisorApprovalsPage() {
           {criteria.map((c) => (
             <div key={c.id} style={{ margin: "14px 0" }}>
               <strong>{c.name}</strong> <small>(น้ำหนัก {c.weight})</small>
-              <div>
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <label key={n} style={{ marginRight: 12 }}>
-                    <input
-                      type="radio"
-                      name={`s-${c.id}`}
-                      checked={scores[c.id] === n}
-                      disabled={!canEdit}
-                      onChange={() => setScores({ ...scores, [c.id]: n })}
-                    />{" "}
-                    {n}
-                  </label>
-                ))}
-              </div>
+              {autoLocked(c) ? (
+                <div>
+                  <div><small>คำนวณอัตโนมัติจากข้อมูลงาน</small></div>
+                  {saved[c.id] ? (
+                    <div>
+                      {saved[c.id].detail} → คะแนน <strong>{saved[c.id].score}</strong> / 5
+                    </div>
+                  ) : (
+                    <div>
+                      <small>{canEdit ? "ระบบจะคำนวณให้เมื่อกดบันทึกร่าง" : "-"}</small>
+                    </div>
+                  )}
+                  <input
+                    placeholder="หมายเหตุ (ไม่บังคับ)"
+                    value={notes[c.id] ?? ""}
+                    disabled={!canEdit}
+                    onChange={(e) => setNotes({ ...notes, [c.id]: e.target.value })}
+                    style={{ display: "block", width: "100%", marginTop: 4 }}
+                  />
+                </div>
+              ) : (
+                <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginTop: 6 }}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <label
+                      key={n}
+                      style={{ display: "inline-flex", flexDirection: "row", alignItems: "center", gap: 6, margin: 0, cursor: "pointer" }}
+                    >
+                      <input
+                        type="radio"
+                        name={`s-${c.id}`}
+                        checked={scores[c.id] === n}
+                        disabled={!canEdit}
+                        onChange={() => setScores({ ...scores, [c.id]: n })}
+                        style={{ width: "auto", margin: 0, padding: 0 }}
+                      />
+                      {n}
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
           ))}
 

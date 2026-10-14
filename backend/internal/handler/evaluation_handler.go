@@ -143,7 +143,7 @@ func (h *EvaluationHandler) UpdateCriteria(c *gin.Context) {
 // ---- Evaluation ----
 type scoreRequest struct {
 	CriteriaID uint   `json:"criteria_id" binding:"required"`
-	Score      int    `json:"score" binding:"required,min=1,max=5"`
+	Score      int    `json:"score" binding:"omitempty,min=1,max=5"`
 	Comment    string `json:"comment"`
 }
 

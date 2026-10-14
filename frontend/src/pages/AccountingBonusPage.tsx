@@ -67,7 +67,7 @@ export default function AccountingBonusPage() {
 
   // โบนัส
   const [cycleId, setCycleId] = useState("");
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [candidates] = useState<Candidate[]>([]);
   const [bonuses, setBonuses] = useState<Bonus[]>([]);
   const [candAmount, setCandAmount] = useState<Record<number, string>>({});
   const [editId, setEditId] = useState<number | null>(null);

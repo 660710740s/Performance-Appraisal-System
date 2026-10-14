@@ -32,6 +32,7 @@ export interface Criteria {
   department?: string;
   level?: string;
   is_active?: boolean;
+  source?: string;
 }
 
 export interface Department {
@@ -49,6 +50,10 @@ export interface Score {
   criteria_id: number;
   score: number;
   comment: string;
+  weight?: number;
+  source?: string;
+  metric?: number;
+  detail?: string;
 }
 
 export type EvaluationStatus = "draft" | "submitted" | "approved" | "rejected";
