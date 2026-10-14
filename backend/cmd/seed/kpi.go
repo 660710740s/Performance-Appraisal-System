@@ -50,17 +50,28 @@ func seedKpi(db *gorm.DB, users domain.UserRepository, evals domain.EvaluationRe
 			Rubric: "5 = ≥90%, 4 = ≥80%, 3 = ≥70%, 2 = ≥60%, 1 = ต่ำกว่า 60% (ระบบคำนวณจากข้อมูลงาน)",
 			Weight: 20, Source: domain.SourceAutoQuality},
 	}
-	for i := range autos {
-		c := autos[i]
-		c.Department, c.IsActive = "พัฒนาซอฟต์แวร์", true
-		if have[c.Name+"|"+c.Department] {
-			log.Printf("kpi skip criteria (exists): %s", c.Name)
-			continue
+	// น้ำหนักต่อแผนก: ลำดับตรงกับ autos (completion, ontime, quality)
+	deptWeights := []struct {
+		dept    string
+		weights [3]float64
+	}{
+		{"พัฒนาซอฟต์แวร์", [3]float64{30, 25, 20}},
+		{"การตลาด", [3]float64{20, 15, 10}},
+	}
+	for _, dw := range deptWeights {
+		for i := range autos {
+			c := autos[i]
+			c.Department, c.IsActive = dw.dept, true
+			c.Weight = dw.weights[i]
+			if have[c.Name+"|"+c.Department] {
+				log.Printf("kpi skip criteria (exists): %s [%s]", c.Name, c.Department)
+				continue
+			}
+			if err := evals.CreateCriteria(&c); err != nil {
+				log.Fatalf("kpi criteria %s [%s]: %v", c.Name, c.Department, err)
+			}
+			log.Printf("kpi created criteria: %s [%s]", c.Name, c.Department)
 		}
-		if err := evals.CreateCriteria(&c); err != nil {
-			log.Fatalf("kpi criteria %s: %v", c.Name, err)
-		}
-		log.Printf("kpi created criteria: %s", c.Name)
 	}
 
 	// 3) งานจำลองของ employee1-3 ในรอบ ครึ่งปีหลัง 2026 (ผลโดยประมาณ: คนที่ 1 ดีมาก, 2 กลางๆ, 3 ต่ำ)
