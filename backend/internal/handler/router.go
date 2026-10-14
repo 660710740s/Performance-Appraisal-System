@@ -32,6 +32,7 @@ func SetupRouter(jwtSecret string, auth *AuthHandler, user *UserHandler, eval *E
 		authed.GET("/cycles", eval.ListCycles)
 		authed.POST("/cycles", middleware.RequireRoles(domain.RoleHR), eval.CreateCycle)
 		authed.PUT("/cycles/:id", middleware.RequireRoles(domain.RoleHR), eval.UpdateCycle)
+		authed.POST("/cycles/:id/generate-drafts", middleware.RequireRoles(domain.RoleHR), eval.GenerateDrafts)
 		authed.GET("/criteria", eval.ListCriteria)
 		authed.POST("/criteria", middleware.RequireRoles(domain.RoleHR, domain.RoleManager), eval.CreateCriteria)
 		authed.PUT("/criteria/:id", middleware.RequireRoles(domain.RoleHR), eval.UpdateCriteria)
