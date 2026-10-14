@@ -98,6 +98,21 @@ export default function HRCyclesPage() {
     }
   }
 
+  async function generateDrafts(c: Cycle) {
+    setError("");
+    setInfo("");
+    setBusy(true);
+    try {
+      const res = await client.post(`/cycles/${c.id}/generate-drafts`);
+      const d = res.data.data;
+      setInfo(`สร้างร่างใหม่ ${d.created} ใบ, มีอยู่แล้ว ${d.already_exists}, ข้ามเพราะไม่มีหัวหน้า ${d.skipped_no_manager}, ข้ามเพราะหัวหน้าไม่มีสิทธิ์ประเมิน ${d.skipped_manager_not_eligible}, ล้มเหลว ${d.failed}`);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div style={{ maxWidth: 800 }}>
       <h1>รอบประเมิน</h1>
@@ -150,6 +165,7 @@ export default function HRCyclesPage() {
                 {c.status === "open" && (
                   <>
                     <button disabled={busy} onClick={() => startEdit(c)}>แก้ไข</button>{" "}
+                    <button disabled={busy} onClick={() => generateDrafts(c)}>สร้างร่างให้ทุกคน</button>{" "}
                     <button disabled={busy} onClick={() => closeCycle(c)}>ปิดรอบ</button>
                   </>
                 )}
