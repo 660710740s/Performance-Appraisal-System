@@ -29,4 +29,5 @@ type TaskRepository interface {
 	CreateTask(t *Task) error
 	CreateTasks(ts []Task) error
 	ListTasksDueBetween(employeeID uint, from, to time.Time) ([]Task, error)
+	ListTasksDueBetweenForEmployees(ids []uint, from, to time.Time) ([]Task, error)
 }

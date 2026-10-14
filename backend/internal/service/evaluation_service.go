@@ -183,8 +183,9 @@ func (s *EvaluationService) UpdateCriteria(id uint, in UpdateCriteriaInput) (*do
 
 // ตรวจคะแนนให้ครบตามเกณฑ์ของพนักงาน แล้วคำนวณคะแนนรวมถ่วงน้ำหนัก
 // เกณฑ์ auto ที่ข้อมูลงานพอ ระบบคำนวณให้เอง ที่เหลือต้องกรอกเอง
-// ใช้ร่วมกันระหว่าง Create และ UpdateDraft
-func (s *EvaluationService) buildScores(emp *domain.User, cycle *domain.EvaluationCycle, in []ScoreInput) ([]domain.EvaluationScore, float64, error) {
+// strict=true (ตอนส่ง) ต้องมีคะแนนครบทุกข้อ / strict=false (ร่าง) เว้นข้อที่ยังไม่กรอกไว้ได้ (Score=0)
+// ใช้ร่วมกันระหว่าง Create, UpdateDraft และ Submit
+func (s *EvaluationService) buildScores(emp *domain.User, cycle *domain.EvaluationCycle, in []ScoreInput, strict bool) ([]domain.EvaluationScore, float64, error) {
 	criteria, err := s.evals.ListCriteriaFor(emp.Department, emp.Level)
 	if err != nil {
 		return nil, 0, err
@@ -198,7 +199,7 @@ func (s *EvaluationService) buildScores(emp *domain.User, cycle *domain.Evaluati
 		}
 	}
 
-	// ตรวจ input: ต้องเป็นเกณฑ์ของพนักงาน ไม่ซ้ำ และคะแนน 1-5
+	// ตรวจ input: ต้องเป็นเกณฑ์ของพนักงาน ไม่ซ้ำ และคะแนน 0-5 (0 = ยังไม่ให้คะแนน)
 	given := make(map[uint]ScoreInput, len(in))
 	for _, sc := range in {
 		if _, ok := byID[sc.CriteriaID]; !ok {
@@ -228,10 +229,17 @@ func (s *EvaluationService) buildScores(emp *domain.User, cycle *domain.Evaluati
 			}
 		} else {
 			sc, has := given[c.ID]
-			if !has || sc.Score < 1 {
-				return nil, 0, domain.ErrInvalidInput // เกณฑ์ที่ระบบคำนวณให้ไม่ได้ ต้องกรอกเอง
+			if has {
+				row.Comment = sc.Comment
 			}
-			row.Score, row.Comment = sc.Score, sc.Comment
+			if !has || sc.Score < 1 {
+				if strict {
+					return nil, 0, domain.ErrInvalidInput // ตอนส่ง ต้องมีคะแนนครบ
+				}
+				scores = append(scores, row) // ร่าง: ยังไม่ให้คะแนน (Score=0) ไม่นับในคะแนนรวม
+				continue
+			}
+			row.Score = sc.Score
 		}
 		weighted += float64(row.Score) * c.Weight
 		totalWeight += c.Weight
@@ -242,6 +250,19 @@ func (s *EvaluationService) buildScores(emp *domain.User, cycle *domain.Evaluati
 		total = round2(weighted / totalWeight)
 	}
 	return scores, total, nil
+}
+
+// แปลงคะแนนที่บันทึกไว้กลับเป็น input (ข้อ auto ไม่ส่งคะแนน ให้ระบบคำนวณใหม่)
+func scoreInputsFrom(rows []domain.EvaluationScore) []ScoreInput {
+	out := make([]ScoreInput, 0, len(rows))
+	for _, r := range rows {
+		in := ScoreInput{CriteriaID: r.CriteriaID, Comment: r.Comment}
+		if r.Source == domain.SourceManual {
+			in.Score = r.Score
+		}
+		out = append(out, in)
+	}
+	return out
 }
 
 func (s *EvaluationService) Create(evaluatorID uint, role domain.Role, in CreateEvaluationInput) (*domain.Evaluation, error) {
@@ -288,7 +309,7 @@ func (s *EvaluationService) Create(evaluatorID uint, role domain.Role, in Create
 		return nil, domain.ErrConflict
 	}
 
-	scores, total, err := s.buildScores(employee, cycle, in.Scores)
+	scores, total, err := s.buildScores(employee, cycle, in.Scores, false)
 	if err != nil {
 		return nil, err
 	}
@@ -330,7 +351,7 @@ func (s *EvaluationService) UpdateDraft(id, userID uint, in UpdateEvaluationInpu
 	if err != nil {
 		return nil, err
 	}
-	scores, total, err := s.buildScores(emp, cycle, in.Scores)
+	scores, total, err := s.buildScores(emp, cycle, in.Scores, false)
 	if err != nil {
 		return nil, err
 	}
@@ -364,6 +385,20 @@ func (s *EvaluationService) Submit(id, evaluatorID uint, role domain.Role) (*dom
 	if !cycleAcceptsEvaluation(cycle, time.Now()) {
 		return nil, domain.ErrInvalidInput
 	}
+	// คำนวณคะแนน auto ใหม่ตามข้อมูลงานล่าสุด และตรวจว่าให้คะแนนครบก่อนส่ง
+	emp, err := s.users.GetByID(e.EmployeeID)
+	if err != nil {
+		return nil, err
+	}
+	scores, total, err := s.buildScores(emp, cycle, scoreInputsFrom(e.Scores), true)
+	if err != nil {
+		return nil, err
+	}
+	e.TotalScore = total
+	if err := s.evals.UpdateEvaluationWithScores(e, scores); err != nil {
+		return nil, err
+	}
+
 	now := time.Now()
 	e.Status = domain.EvalStatusSubmitted
 	e.SubmittedAt = &now

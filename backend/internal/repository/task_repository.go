@@ -27,3 +27,12 @@ func (r *taskRepository) ListTasksDueBetween(employeeID uint, from, to time.Time
 		Order("due_date, id").Find(&out).Error
 	return out, err
 }
+func (r *taskRepository) ListTasksDueBetweenForEmployees(ids []uint, from, to time.Time) ([]domain.Task, error) {
+	var out []domain.Task
+	if len(ids) == 0 {
+		return out, nil
+	}
+	err := r.db.Where("employee_id IN ? AND due_date >= ? AND due_date < ?", ids, from, to).
+		Order("employee_id, due_date, id").Find(&out).Error
+	return out, err
+}

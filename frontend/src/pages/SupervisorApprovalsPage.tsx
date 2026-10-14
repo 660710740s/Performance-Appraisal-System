@@ -150,7 +150,7 @@ export default function SupervisorApprovalsPage() {
     setInfo("");
     if (!formFor || formCycle === null) return;
     const manual = criteria.filter((c) => !autoLocked(c));
-    if (criteria.length === 0 || manual.some((c) => !scores[c.id])) {
+    if (criteria.length === 0 || (submit && manual.some((c) => !scores[c.id]))) {
       setError("กรุณาให้คะแนนครบทุกเกณฑ์ (ข้อที่ระบบคำนวณให้ไม่ต้องกรอก)");
       return;
     }
