@@ -117,8 +117,9 @@ func main() {
 	}
 
 	// ---- Criteria (เกณฑ์กลาง + ตามแผนก + ตามระดับ) ----
-	existingCriteria, err := evalRepo.ListCriteria()
-	if err != nil {
+		// ดึงเกณฑ์ทุกสถานะ (รวมที่ปิดอยู่) กันสร้างเกณฑ์ที่ปิดไปแล้วซ้ำทุกครั้งที่รัน seed
+	var existingCriteria []domain.Criteria
+	if err := db.Find(&existingCriteria).Error; err != nil {
 		log.Fatal(err)
 	}
 	have := map[string]bool{}
