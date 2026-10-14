@@ -2,6 +2,10 @@ import "../redesign.css";
 import { useCallback, useEffect, useState } from "react";
 import client, { errorMessage } from "../api/client";
 import type { Cycle } from "../types";
+import {
+  ResponsiveContainer, BarChart, Bar as RBar, XAxis, YAxis, Tooltip,
+  CartesianGrid, PieChart, Pie, Cell, Legend,
+} from "recharts";
 
 interface Bonus {
   id: number;
@@ -51,6 +55,59 @@ function Bar({ pct, color = "#2563eb" }: { pct: number; color?: string }) {
   );
 }
 
+function DeptChart({ data }: { data: Summary["departments"] }) {
+  return (
+    <ResponsiveContainer width="100%" height={260}>
+      <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+        <XAxis dataKey="department" />
+        <YAxis domain={[0, 5]} />
+        <Tooltip formatter={(v) => Number(v).toFixed(2)} />
+        <RBar dataKey="avg_score" name="คะแนนเฉลี่ย" fill="#2563eb" radius={[6, 6, 0, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+function BonusDonut({ data }: { data: Summary["bonuses"] }) {
+  const rows = data.map((b) => {
+    const s = BONUS_STATUS.find((x) => x.key === b.status);
+    return { name: s?.label ?? b.status, value: b.count, color: s?.color ?? "#94a3b8" };
+  });
+  return (
+    <ResponsiveContainer width="100%" height={260}>
+      <PieChart>
+        <Pie data={rows} dataKey="value" nameKey="name" innerRadius={55} outerRadius={90} paddingAngle={2}>
+          {rows.map((r) => <Cell key={r.name} fill={r.color} />)}
+        </Pie>
+        <Tooltip />
+        <Legend />
+      </PieChart>
+    </ResponsiveContainer>
+  );
+}
+
+function ProgressChart({ data }: { data: Summary["progress"] }) {
+  const rows = data.map((p) => ({
+    name: p.cycle_name,
+    approved: p.approved,
+    remaining: Math.max(0, p.total_people - p.approved),
+  }));
+  return (
+    <ResponsiveContainer width="100%" height={260}>
+      <BarChart data={rows} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+        <XAxis dataKey="name" />
+        <YAxis allowDecimals={false} />
+        <Tooltip />
+        <Legend />
+        <RBar dataKey="approved" name="อนุมัติแล้ว" stackId="a" fill="#15803d" />
+        <RBar dataKey="remaining" name="ยังไม่เสร็จ" stackId="a" fill="#cbd5e1" radius={[6, 6, 0, 0]} />
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
 export default function ExecutiveDashboardPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [bonuses, setBonuses] = useState<Bonus[]>([]);
@@ -97,7 +154,6 @@ export default function ExecutiveDashboardPage() {
   }, [load]);
 
   const cycleName = (id: number) => cycles.find((c) => c.id === id)?.name ?? `รอบ #${id}`;
-
 
   async function decide(id: number, action: "approve" | "reject") {
     setError("");
@@ -154,6 +210,35 @@ export default function ExecutiveDashboardPage() {
                 </div>
               );
             })}
+          </div>
+
+          {/* ===== กราฟ ===== */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+              gap: 14,
+              marginBottom: 28,
+            }}
+          >
+            {[
+              { title: "คะแนนเฉลี่ยรายแผนก", chart: <DeptChart data={summary.departments ?? []} /> },
+              { title: "จำนวนโบนัสตามสถานะ", chart: <BonusDonut data={summary.bonuses ?? []} /> },
+              { title: "ความคืบหน้ารอบประเมิน", chart: <ProgressChart data={summary.progress ?? []} /> },
+            ].map((c) => (
+              <div
+                key={c.title}
+                style={{
+                  padding: 18,
+                  border: "1px solid #e7ebf2",
+                  borderRadius: 14,
+                  background: "#fff",
+                }}
+              >
+                <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 8 }}>{c.title}</div>
+                {c.chart}
+              </div>
+            ))}
           </div>
 
           <h3>คะแนนเฉลี่ยตามแผนก</h3>
