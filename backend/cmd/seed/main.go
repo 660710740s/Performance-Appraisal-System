@@ -163,5 +163,8 @@ func main() {
 		log.Printf("created criteria: %s (แผนก=%q ระดับ=%q)", c.Name, c.Dept, c.Level)
 	}
 
+	if os.Getenv("SEED_KPI") == "1" {
+		seedKpi(db, userRepo, evalRepo)
+	}
 	log.Println("seed เสร็จสิ้น | บัญชีทดสอบ: hr@ / executive@ / accounting@ / manager1-2@ / employee1-6@ (example.com)")
 }

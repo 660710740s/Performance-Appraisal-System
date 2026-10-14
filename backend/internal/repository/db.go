@@ -40,6 +40,7 @@ func NewDB(dsn string) (*gorm.DB, error) {
 			&domain.PromotionRequest{},
 			&domain.TransferRequest{},
 			&domain.TrainingPlan{},
+			&domain.Task{},
 		); err != nil {
 			return nil, err
 		}

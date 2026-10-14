@@ -35,6 +35,7 @@ type Criteria struct {
 	Rubric      string  `gorm:"type:text" json:"rubric"`
 	Department  string  `gorm:"size:100;index" json:"department"`
 	Level       string  `gorm:"size:50" json:"level"`
+	Source      string  `gorm:"size:30;default:manual" json:"source"`
 }
 
 // รายการหลักสำหรับ dropdown
@@ -68,11 +69,15 @@ type Evaluation struct {
 }
 
 type EvaluationScore struct {
-	ID           uint   `gorm:"primaryKey" json:"id"`
-	EvaluationID uint   `gorm:"not null;index" json:"evaluation_id"`
-	CriteriaID   uint   `gorm:"not null" json:"criteria_id"`
-	Score        int    `gorm:"not null" json:"score"` // 1-5
-	Comment      string `json:"comment"`
+	ID           uint    `gorm:"primaryKey" json:"id"`
+	EvaluationID uint    `gorm:"not null;index" json:"evaluation_id"`
+	CriteriaID   uint    `gorm:"not null" json:"criteria_id"`
+	Score        int     `gorm:"not null" json:"score"` // 1-5
+	Weight       float64 `json:"weight"`
+	Source       string  `gorm:"size:30" json:"source"`
+	Metric       float64 `json:"metric"`
+	Detail       string  `json:"detail"`
+	Comment      string  `json:"comment"`
 }
 
 type EvaluationRepository interface {

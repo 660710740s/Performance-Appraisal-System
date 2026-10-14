@@ -33,7 +33,8 @@ func main() {
 	// services
 	authSvc := service.NewAuthService(userRepo, cfg.JWTSecret, 24*time.Hour)
 	userSvc := service.NewUserService(userRepo)
-	evalSvc := service.NewEvaluationService(evalRepo, userRepo)
+	kpiSvc := service.NewKpiService(repository.NewTaskRepository(db))
+	evalSvc := service.NewEvaluationService(evalRepo, userRepo).WithKpi(kpiSvc)
 	accSvc := service.NewAccountingService(accRepo, evalRepo, userRepo)
 	reportSvc := service.NewReportService(reportRepo, evalRepo, accRepo)
 	promoSvc := service.NewPromotionService(promoRepo, evalRepo, userRepo)

@@ -29,6 +29,7 @@ type UpdateEvaluationInput struct {
 type EvaluationService struct {
 	evals domain.EvaluationRepository
 	users domain.UserRepository
+	kpi   *KpiService
 }
 
 func NewEvaluationService(evals domain.EvaluationRepository, users domain.UserRepository) *EvaluationService {
@@ -141,8 +142,8 @@ func (s *EvaluationService) UpdateCriteria(id uint, in UpdateCriteriaInput) (*do
 		return nil, err
 	}
 	dept, level := c.Department, c.Level
-		if in.Department != nil {
-		dept = strings.TrimSpace(*in.Department) // แก้จาก dept = *in.Department
+	if in.Department != nil {
+		dept = strings.TrimSpace(*in.Department)           // แก้จาก dept = *in.Department
 		if err := s.validateDepartment(dept); err != nil { // NEW
 			return nil, err
 		}
@@ -181,36 +182,64 @@ func (s *EvaluationService) UpdateCriteria(id uint, in UpdateCriteriaInput) (*do
 // ---- Evaluation ----
 
 // ตรวจคะแนนให้ครบตามเกณฑ์ของพนักงาน แล้วคำนวณคะแนนรวมถ่วงน้ำหนัก
+// เกณฑ์ auto ที่ข้อมูลงานพอ ระบบคำนวณให้เอง ที่เหลือต้องกรอกเอง
 // ใช้ร่วมกันระหว่าง Create และ UpdateDraft
-func (s *EvaluationService) buildScores(emp *domain.User, in []ScoreInput) ([]domain.EvaluationScore, float64, error) {
+func (s *EvaluationService) buildScores(emp *domain.User, cycle *domain.EvaluationCycle, in []ScoreInput) ([]domain.EvaluationScore, float64, error) {
 	criteria, err := s.evals.ListCriteriaFor(emp.Department, emp.Level)
 	if err != nil {
 		return nil, 0, err
 	}
-	weights := make(map[uint]float64, len(criteria))
+	byID := make(map[uint]domain.Criteria, len(criteria))
+	hasAuto := false
 	for _, c := range criteria {
-		weights[c.ID] = c.Weight
+		byID[c.ID] = c
+		if c.Source != "" && c.Source != domain.SourceManual {
+			hasAuto = true
+		}
 	}
-	if len(in) != len(criteria) {
-		return nil, 0, domain.ErrInvalidInput // ต้องให้คะแนนครบทุกเกณฑ์
+
+	// ตรวจ input: ต้องเป็นเกณฑ์ของพนักงาน ไม่ซ้ำ และคะแนน 1-5
+	given := make(map[uint]ScoreInput, len(in))
+	for _, sc := range in {
+		if _, ok := byID[sc.CriteriaID]; !ok {
+			return nil, 0, domain.ErrInvalidInput
+		}
+		if _, dup := given[sc.CriteriaID]; dup || sc.Score < 1 || sc.Score > 5 {
+			return nil, 0, domain.ErrInvalidInput
+		}
+		given[sc.CriteriaID] = sc
+	}
+
+	var metrics map[string]KpiMetric
+	if hasAuto && s.kpi != nil {
+		if metrics, err = s.kpi.Compute(emp.ID, cycle, time.Now()); err != nil {
+			return nil, 0, err
+		}
 	}
 
 	var weighted, totalWeight float64
-	scores := make([]domain.EvaluationScore, 0, len(in))
-	seen := map[uint]bool{}
-	for _, sc := range in {
-		w, ok := weights[sc.CriteriaID]
-		if !ok || seen[sc.CriteriaID] || sc.Score < 1 || sc.Score > 5 {
-			return nil, 0, domain.ErrInvalidInput
+	scores := make([]domain.EvaluationScore, 0, len(criteria))
+	for _, c := range criteria {
+		row := domain.EvaluationScore{CriteriaID: c.ID, Weight: c.Weight, Source: domain.SourceManual}
+		if m, ok := metrics[c.Source]; ok && m.Enough {
+			row.Score, row.Source, row.Metric, row.Detail = m.Score, c.Source, m.Percent, m.Detail()
+			if sc, has := given[c.ID]; has {
+				row.Comment = sc.Comment // เก็บหมายเหตุได้ แต่คะแนนใช้ของระบบ
+			}
+		} else {
+			sc, has := given[c.ID]
+			if !has {
+				return nil, 0, domain.ErrInvalidInput // เกณฑ์ที่ระบบคำนวณให้ไม่ได้ ต้องกรอกเอง
+			}
+			row.Score, row.Comment = sc.Score, sc.Comment
 		}
-		seen[sc.CriteriaID] = true
-		weighted += float64(sc.Score) * w
-		totalWeight += w
-		scores = append(scores, domain.EvaluationScore{CriteriaID: sc.CriteriaID, Score: sc.Score, Comment: sc.Comment})
+		weighted += float64(row.Score) * c.Weight
+		totalWeight += c.Weight
+		scores = append(scores, row)
 	}
 	var total float64
 	if totalWeight > 0 {
-		total = weighted / totalWeight
+		total = round2(weighted / totalWeight)
 	}
 	return scores, total, nil
 }
@@ -259,7 +288,7 @@ func (s *EvaluationService) Create(evaluatorID uint, role domain.Role, in Create
 		return nil, domain.ErrConflict
 	}
 
-	scores, total, err := s.buildScores(employee, in.Scores)
+	scores, total, err := s.buildScores(employee, cycle, in.Scores)
 	if err != nil {
 		return nil, err
 	}
@@ -301,7 +330,7 @@ func (s *EvaluationService) UpdateDraft(id, userID uint, in UpdateEvaluationInpu
 	if err != nil {
 		return nil, err
 	}
-	scores, total, err := s.buildScores(emp, in.Scores)
+	scores, total, err := s.buildScores(emp, cycle, in.Scores)
 	if err != nil {
 		return nil, err
 	}
