@@ -24,9 +24,13 @@ func registerAccountingRoutes(authed *gin.RouterGroup, h *AccountingHandler) {
 	bonus.PUT("/bonuses/:id",
 		middleware.RequireRoles(domain.RoleHR), h.UpdateBonus)
 
+	bonus.POST("/bonuses/bulk",
+		middleware.RequireRoles(domain.RoleHR), h.CreateBonusesBulk)
+
 	// Executive อนุมัติโบนัส (เหมือนเดิม)
 	exec := authed.Group("/executive/bonuses", middleware.RequireRoles(domain.RoleExecutive))
 	exec.GET("", h.ListBonuses)
 	exec.POST("/:id/approve", h.Approve)
+	exec.POST("/approve-bulk", h.ApproveBulk)
 	exec.POST("/:id/reject", h.Reject)
 }

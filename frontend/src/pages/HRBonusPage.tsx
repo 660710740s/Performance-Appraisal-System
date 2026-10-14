@@ -23,6 +23,15 @@ interface Candidate {
   total_score: number;
   base_salary: number | null;
   suggested_amount: number | null;
+  eligible: boolean; // NEW: ผ่านเกณฑ์และเสนอได้
+  reason?: string; // NEW: เหตุผลที่เสนอไม่ได้
+}
+
+// NEW: ผลการเสนอแบบกลุ่มจาก backend
+interface BulkCreateResult {
+  created: number;
+  total_amount: number;
+  skipped: { evaluation_id: number; employee_id: number; reason: string }[];
 }
 
 const STATUS_LABEL = {
@@ -47,6 +56,10 @@ export default function HRBonusPage() {
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [busy, setBusy] = useState(false);
+  // NEW: คะแนนขั้นต่ำ (ไม่บังคับ) และผลการเสนอแบบกลุ่ม
+  const [minInput, setMinInput] = useState("");
+  const [appliedMin, setAppliedMin] = useState<number | null>(null);
+  const [bulkResult, setBulkResult] = useState<BulkCreateResult | null>(null);
 
   const nameOf = (id: number) => names[id] ?? `#${id}`;
 
@@ -77,7 +90,9 @@ export default function HRBonusPage() {
     if (!cycleId) return;
     try {
       const [c, b] = await Promise.all([
-        client.get("/accounting/bonus-candidates", { params: { cycle_id: cycleId } }),
+        client.get("/accounting/bonus-candidates", {
+          params: { cycle_id: cycleId, ...(appliedMin !== null ? { min_score: appliedMin } : {}) },
+        }),
         client.get("/accounting/bonuses", { params: { cycle_id: cycleId } }),
       ]);
       setCandidates(c.data.data ?? []);
@@ -85,7 +100,7 @@ export default function HRBonusPage() {
     } catch (err) {
       setError(errorMessage(err));
     }
-  }, [cycleId]);
+  }, [cycleId, appliedMin]);
 
   useEffect(() => {
     load();
@@ -122,6 +137,52 @@ export default function HRBonusPage() {
     }, "เสนอโบนัสแล้ว ส่งให้ผู้บริหารอนุมัติ");
   }
 
+  // NEW: ใช้คะแนนขั้นต่ำที่กรอก (ว่าง = ใช้เกณฑ์ปกติของระบบ)
+  function applyMin() {
+    const t = minInput.trim();
+    if (t === "") {
+      setAppliedMin(null);
+      return;
+    }
+    const n = Number(t);
+    if (Number.isNaN(n) || n < 1 || n > 5) {
+      setError("คะแนนขั้นต่ำต้องอยู่ระหว่าง 1 ถึง 5");
+      return;
+    }
+    setError("");
+    setAppliedMin(n);
+  }
+
+  const eligible = candidates.filter((c) => c.eligible);
+  const notEligible = candidates.filter((c) => !c.eligible);
+  const eligibleTotal = eligible.reduce((sum, c) => sum + (c.suggested_amount ?? 0), 0);
+
+  // NEW: เสนอทุกคนที่ผ่านเกณฑ์ด้วยยอดที่ระบบเสนอ ในการกดครั้งเดียว
+  async function createAllEligible() {
+    if (eligible.length === 0) return;
+    const ok = window.confirm(
+      `เสนอโบนัสให้ ${eligible.length} คน ยอดรวม ${money(eligibleTotal)} บาท ใช่หรือไม่?`
+    );
+    if (!ok) return;
+    setError("");
+    setInfo("");
+    setBulkResult(null);
+    setBusy(true);
+    try {
+      const body: Record<string, unknown> = { cycle_id: Number(cycleId) };
+      if (appliedMin !== null) body.min_score = appliedMin;
+      const res = await client.post("/accounting/bonuses/bulk", body);
+      const r: BulkCreateResult = res.data.data;
+      setBulkResult(r);
+      setInfo(`เสนอโบนัสแล้ว ${r.created} คน ยอดรวม ${money(r.total_amount)} บาท ส่งให้ผู้บริหารอนุมัติ`);
+      await load();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   function startEdit(b: Bonus) {
     setError("");
     setEditId(b.id);
@@ -152,7 +213,14 @@ export default function HRBonusPage() {
 
       <label>
         รอบประเมิน{" "}
-        <select value={cycleId} onChange={(e) => { setCycleId(e.target.value); setEditId(null); }}>
+        <select
+          value={cycleId}
+          onChange={(e) => {
+            setCycleId(e.target.value);
+            setEditId(null);
+            setBulkResult(null);
+          }}
+        >
           {cycles.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
@@ -160,11 +228,53 @@ export default function HRBonusPage() {
       </label>
 
       <h3 style={{ marginTop: 20 }}>แบบประเมินที่อนุมัติแล้ว และยังไม่ได้เสนอโบนัส</h3>
+
+      <label>
+        คะแนนขั้นต่ำ (ไม่บังคับ){" "}
+        <input
+          type="number"
+          min="1"
+          max="5"
+          step="0.1"
+          placeholder="เช่น 3"
+          value={minInput}
+          onChange={(e) => setMinInput(e.target.value)}
+          onBlur={applyMin}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") applyMin();
+          }}
+          style={{ width: 100 }}
+        />
+      </label>
+
       {candidates.length === 0 && <p>ไม่มีรายการ</p>}
-      {candidates.map((c) => (
+      {candidates.length > 0 && (
+        <p>
+          ผ่านเกณฑ์ {eligible.length} คน · ยอดรวมที่ระบบเสนอ {money(eligibleTotal)} บาท · ยังเสนอไม่ได้{" "}
+          {notEligible.length} คน
+        </p>
+      )}
+      <button disabled={busy || eligible.length === 0} onClick={createAllEligible}>
+        เสนอทั้งหมดที่ผ่านเกณฑ์ ({eligible.length} คน)
+      </button>
+
+      {bulkResult && bulkResult.skipped.length > 0 && (
+        <details style={{ marginTop: 8 }}>
+          <summary>ข้ามไป {bulkResult.skipped.length} คน</summary>
+          {bulkResult.skipped.map((s) => (
+            <div key={s.evaluation_id}>
+              {nameOf(s.employee_id)} · {s.reason}
+            </div>
+          ))}
+        </details>
+      )}
+
+      <h4 style={{ marginTop: 16 }}>ปรับยอดหรือเสนอรายคน</h4>
+      {eligible.length === 0 && <p>ไม่มีรายการที่ผ่านเกณฑ์</p>}
+      {eligible.map((c) => (
         <div key={c.evaluation_id} style={{ margin: "8px 0" }}>
           {nameOf(c.employee_id)} · คะแนน {c.total_score} · เงินเดือน {money(c.base_salary)} · ระบบเสนอ{" "}
-          {c.suggested_amount === null ? "คำนวณไม่ได้ (ยังไม่ตั้งเงินเดือน)" : money(c.suggested_amount)}{" "}
+          {money(c.suggested_amount)}{" "}
           <input
             type="number"
             min="0"
@@ -178,6 +288,17 @@ export default function HRBonusPage() {
           </button>
         </div>
       ))}
+
+      {notEligible.length > 0 && (
+        <details style={{ marginTop: 12 }}>
+          <summary>ยังเสนอไม่ได้ {notEligible.length} คน</summary>
+          {notEligible.map((c) => (
+            <div key={c.evaluation_id} style={{ margin: "6px 0" }}>
+              {nameOf(c.employee_id)} · คะแนน {c.total_score} · {c.reason ?? "เสนอไม่ได้"}
+            </div>
+          ))}
+        </details>
+      )}
 
       <h3 style={{ marginTop: 24 }}>ข้อเสนอโบนัสของรอบนี้</h3>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>

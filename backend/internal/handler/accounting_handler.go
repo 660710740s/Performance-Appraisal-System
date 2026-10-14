@@ -38,6 +38,20 @@ func parseOptionalUint(c *gin.Context, name string) (uint, bool) {
 	return uint(v), true
 }
 
+// NEW: ไม่ส่ง = nil
+func parseOptionalFloat(c *gin.Context, name string) (*float64, bool) {
+	s := c.Query(name)
+	if s == "" {
+		return nil, true
+	}
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		response.BadRequest(c, err)
+		return nil, false
+	}
+	return &v, true
+}
+
 // ---- Salary ----
 type setSalaryRequest struct {
 	EmployeeID    uint      `json:"employee_id" binding:"required"`
@@ -99,6 +113,13 @@ type decisionRequest struct {
 	Note string `json:"note"`
 }
 
+// NEW: เสนอแบบกลุ่ม — min_score ไม่ส่ง = ใช้เกณฑ์ตัวคูณโบนัสอย่างเดียว
+type bulkCreateBonusRequest struct {
+	CycleID  uint     `json:"cycle_id" binding:"required"`
+	MinScore *float64 `json:"min_score" binding:"omitempty,gte=1,lte=5"`
+	Note     string   `json:"note"`
+}
+
 func (h *AccountingHandler) Candidates(c *gin.Context) {
 	cycleID, ok := parseOptionalUint(c, "cycle_id")
 	if !ok {
@@ -108,7 +129,11 @@ func (h *AccountingHandler) Candidates(c *gin.Context) {
 		response.BadRequest(c, strconv.ErrSyntax)
 		return
 	}
-	out, err := h.svc.Candidates(cycleID)
+	minScore, ok := parseOptionalFloat(c, "min_score") // NEW
+	if !ok {
+		return
+	}
+	out, err := h.svc.CandidatesWithMinScore(cycleID, minScore) // NEW
 	if err != nil {
 		response.Error(c, err)
 		return
@@ -141,6 +166,21 @@ func (h *AccountingHandler) CreateBonus(c *gin.Context) {
 		return
 	}
 	response.Created(c, out)
+}
+
+// NEW: เสนอโบนัสทุกคนที่ผ่านเกณฑ์ในรอบนั้นทีเดียว
+func (h *AccountingHandler) CreateBonusesBulk(c *gin.Context) {
+	var req bulkCreateBonusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+	out, err := h.svc.CreateBonusesBulk(middleware.UserID(c), req.CycleID, req.MinScore, req.Note)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+	response.OK(c, out)
 }
 
 func (h *AccountingHandler) UpdateBonus(c *gin.Context) {
@@ -178,3 +218,17 @@ func (h *AccountingHandler) decide(c *gin.Context, approve bool) {
 
 func (h *AccountingHandler) Approve(c *gin.Context) { h.decide(c, true) }
 func (h *AccountingHandler) Reject(c *gin.Context)  { h.decide(c, false) }
+
+// ผู้บริหารอนุมัติโบนัสหลายรายการพร้อมกัน (ของเดิมในโปรเจกต์ คงไว้ตามเดิม)
+func (h *AccountingHandler) ApproveBulk(c *gin.Context) {
+	var req struct {
+		IDs  []uint `json:"ids" binding:"required,min=1,max=500"`
+		Note string `json:"note"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+	results := h.svc.ApproveManyBonuses(middleware.UserID(c), req.IDs, req.Note)
+	response.OK(c, gin.H{"results": results})
+}

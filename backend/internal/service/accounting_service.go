@@ -21,6 +21,21 @@ type BonusCandidate struct {
 	TotalScore      float64  `json:"total_score"`
 	BaseSalary      *float64 `json:"base_salary"`      // nil = ยังไม่มีเงินเดือนในระบบ
 	SuggestedAmount *float64 `json:"suggested_amount"` // nil = คำนวณไม่ได้
+	Eligible        bool     `json:"eligible"`         // NEW: เสนอโบนัสได้ (ผ่านเกณฑ์และมีเงินเดือน)
+	Reason          string   `json:"reason,omitempty"` // NEW: เหตุผลที่เสนอไม่ได้
+}
+
+// NEW: ผลการเสนอโบนัสแบบกลุ่ม
+type BulkCreateSkip struct {
+	EvaluationID uint   `json:"evaluation_id"`
+	EmployeeID   uint   `json:"employee_id"`
+	Reason       string `json:"reason"`
+}
+
+type BulkCreateResult struct {
+	Created     int              `json:"created"`      // จำนวนที่เสนอสำเร็จ
+	TotalAmount float64          `json:"total_amount"` // ยอดรวมที่เสนอ
+	Skipped     []BulkCreateSkip `json:"skipped"`      // ที่ข้ามไป พร้อมเหตุผล
 }
 
 type AccountingService struct {
@@ -93,7 +108,30 @@ func (s *AccountingService) suggest(e *domain.Evaluation) (float64, float64, err
 	return sal.Amount, round2(sal.Amount * bonusMultiplier(e.TotalScore)), nil
 }
 
+// NEW: เสนอโบนัสได้หรือไม่ ถ้าไม่ได้คืนเหตุผล
+// minScore = คะแนนขั้นต่ำที่ HR กำหนดเพิ่ม (nil = ใช้เกณฑ์ใน bonusMultiplier อย่างเดียว)
+func eligibility(c *BonusCandidate, minScore *float64) (bool, string) {
+	switch {
+	case c.SuggestedAmount == nil:
+		return false, "ยังไม่ตั้งเงินเดือน"
+	case minScore != nil && c.TotalScore < *minScore:
+		return false, "คะแนนต่ำกว่าเกณฑ์ขั้นต่ำที่กำหนด"
+	case bonusMultiplier(c.TotalScore) == 0:
+		return false, "คะแนนต่ำกว่าเกณฑ์ที่ได้รับโบนัส"
+	}
+	return true, ""
+}
+
+// signature เดิม ผู้เรียกเดิมไม่ต้องแก้
 func (s *AccountingService) Candidates(cycleID uint) ([]BonusCandidate, error) {
+	return s.CandidatesWithMinScore(cycleID, nil)
+}
+
+// NEW: รายชื่อที่อนุมัติแล้วและยังไม่ได้เสนอ พร้อมบอกว่าใครผ่านเกณฑ์ (Eligible) ใครไม่ผ่านเพราะอะไร
+func (s *AccountingService) CandidatesWithMinScore(cycleID uint, minScore *float64) ([]BonusCandidate, error) {
+	if minScore != nil && (*minScore < 1 || *minScore > 5) { // คะแนนประเมินมีค่า 1-5
+		return nil, domain.ErrInvalidInput
+	}
 	list, err := s.acc.ListApprovedWithoutBonus(cycleID)
 	if err != nil {
 		return nil, err
@@ -108,6 +146,7 @@ func (s *AccountingService) Candidates(cycleID uint) ([]BonusCandidate, error) {
 		} else if !errors.Is(err, domain.ErrNotFound) {
 			return nil, err
 		}
+		c.Eligible, c.Reason = eligibility(&c, minScore)
 		out = append(out, c)
 	}
 	return out, nil
@@ -153,6 +192,44 @@ func (s *AccountingService) CreateBonus(by, evaluationID uint, amount *float64, 
 		UserID: by, Action: "create", Entity: "bonus", EntityID: b.ID,
 	})
 	return b, nil
+}
+
+// NEW: เสนอโบนัสให้ทุกคนที่ผ่านเกณฑ์ในรอบนั้นทีเดียว ด้วยยอดที่ระบบเสนอ
+// เรียก CreateBonus รายคน จึงได้กติกาตรวจสอบและ audit log รายคนเหมือนเดิม
+// คนที่เสนอไม่ได้จะถูกข้ามพร้อมเหตุผล ไม่ทำให้ทั้งชุดล้ม
+// ถ้าเกิด error ของระบบกลางทาง รายการที่สร้างไปแล้วคงอยู่ และกดซ้ำได้ (คนที่เสนอแล้วจะไม่อยู่ในรายชื่ออีก)
+func (s *AccountingService) CreateBonusesBulk(by, cycleID uint, minScore *float64, note string) (*BulkCreateResult, error) {
+	cands, err := s.CandidatesWithMinScore(cycleID, minScore)
+	if err != nil {
+		return nil, err
+	}
+	res := &BulkCreateResult{Skipped: []BulkCreateSkip{}}
+	for i := range cands {
+		c := &cands[i]
+		skip := func(reason string) {
+			res.Skipped = append(res.Skipped, BulkCreateSkip{EvaluationID: c.EvaluationID, EmployeeID: c.EmployeeID, Reason: reason})
+		}
+		if !c.Eligible {
+			skip(c.Reason)
+			continue
+		}
+		b, err := s.CreateBonus(by, c.EvaluationID, nil, note)
+		if err != nil {
+			switch {
+			case errors.Is(err, domain.ErrConflict):
+				skip("ถูกเสนอไปแล้ว")
+				continue
+			case errors.Is(err, domain.ErrInvalidInput), errors.Is(err, domain.ErrNotFound):
+				skip("เสนอไม่ได้")
+				continue
+			}
+			return nil, err
+		}
+		res.Created++
+		res.TotalAmount += b.Amount
+	}
+	res.TotalAmount = round2(res.TotalAmount)
+	return res, nil
 }
 
 // แก้ยอด: ทำได้เฉพาะ pending หรือ rejected แล้วส่งกลับไปรออนุมัติใหม่
@@ -207,4 +284,19 @@ func (s *AccountingService) Decide(by, id uint, approve bool, note string) (*dom
 
 func (s *AccountingService) ListBonuses(cycleID uint, status string) ([]domain.Bonus, error) {
 	return s.acc.ListBonuses(cycleID, status)
+}
+
+// อนุมัติโบนัสหลายรายการ: เรียก Decide เดิมทีละรายการ (สถานะ/audit log ชุดเดิม)
+// รายการที่ไม่ผ่านไม่ทำให้รายการอื่นล้ม และรายงานเหตุผลกลับไปรายรายการ
+// (ของเดิมในโปรเจกต์ คงไว้ตามเดิม — BulkApproveResult ประกาศอยู่ที่อื่นแล้ว)
+func (s *AccountingService) ApproveManyBonuses(by uint, ids []uint, note string) []BulkApproveResult {
+	results := make([]BulkApproveResult, 0, len(ids))
+	for _, id := range ids {
+		if _, err := s.Decide(by, id, true, note); err != nil {
+			results = append(results, BulkApproveResult{ID: id, OK: false, Reason: err.Error()})
+			continue
+		}
+		results = append(results, BulkApproveResult{ID: id, OK: true})
+	}
+	return results
 }

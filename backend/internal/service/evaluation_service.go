@@ -603,3 +603,24 @@ func (s *EvaluationService) validateLevel(name string) error {
 func (s *EvaluationService) ListPositions() ([]domain.Position, error) {
 	return s.evals.ListPositions()
 }
+
+// ผลการอนุมัติรายใบ
+type BulkApproveResult struct {
+	ID     uint   `json:"id"`
+	OK     bool   `json:"ok"`
+	Reason string `json:"reason,omitempty"`
+}
+
+// อนุมัติหลายใบ: เรียก Approve เดิมทีละใบ (สิทธิ์/สถานะ/audit log ชุดเดิม)
+// ใบที่ไม่ผ่านไม่ทำให้ใบอื่นล้ม และรายงานเหตุผลกลับไปรายใบ
+func (s *EvaluationService) ApproveMany(ids []uint, approverID uint, role domain.Role) []BulkApproveResult {
+	results := make([]BulkApproveResult, 0, len(ids))
+	for _, id := range ids {
+		if _, err := s.Approve(id, approverID, role); err != nil {
+			results = append(results, BulkApproveResult{ID: id, OK: false, Reason: err.Error()})
+			continue
+		}
+		results = append(results, BulkApproveResult{ID: id, OK: true})
+	}
+	return results
+}
