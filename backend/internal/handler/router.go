@@ -50,6 +50,7 @@ func SetupRouter(jwtSecret string, auth *AuthHandler, user *UserHandler, eval *E
 		authed.PUT("/evaluations/:id", eval.UpdateDraft)
 		authed.POST("/evaluations/:id/submit", eval.Submit)
 		authed.POST("/evaluations/:id/approve", mgr, eval.Approve)
+		authed.POST("/evaluations/approve-bulk", mgr, eval.ApproveBulk)
 		authed.POST("/evaluations/:id/reject", mgr, eval.Reject)
 		authed.POST("/evaluations/:id/feedback", eval.AddFeedback)
 

@@ -28,7 +28,7 @@ const STATUS_LABEL: Record<EvaluationStatus, string> = {
 };
 
 const TYPE_LABEL = { self: "ประเมินตนเอง", supervisor: "หัวหน้าประเมิน" };
-const PAGE_SIZE = 20;
+
 
 export default function HREvaluationsPage() {
   const [cycles, setCycles] = useState<Cycle[]>([]);
@@ -38,12 +38,21 @@ export default function HREvaluationsPage() {
   const [type, setType] = useState("");
   const [department, setDepartment] = useState("");
   const [offset, setOffset] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [rejectId, setRejectId] = useState<number | null>(null);
   const [reason, setReason] = useState("");
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [confirmBulk, setConfirmBulk] = useState(false);
+  const [failures, setFailures] = useState<{ id: number; reason?: string }[]>([]);
+
+  useEffect(() => {
+    setSelected(new Set());
+    setConfirmBulk(false);
+  }, [cycleId, status, type, department, offset, pageSize]);
 
   useEffect(() => {
     client
@@ -55,7 +64,7 @@ export default function HREvaluationsPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, string | number> = { limit: PAGE_SIZE, offset };
+      const params: Record<string, string | number> = { limit: pageSize, offset };
       if (cycleId) params.cycle_id = cycleId;
       if (status) params.status = status;
       if (type) params.type = type;
@@ -67,7 +76,7 @@ export default function HREvaluationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [cycleId, status, type, department, offset]);
+  }, [cycleId, status, type, department, offset, pageSize]);
 
   useEffect(() => {
     load();
@@ -85,6 +94,83 @@ export default function HREvaluationsPage() {
     try {
       await client.post(path, body);
       setInfo(done);
+      setSelected(new Set());
+      setConfirmBulk(false);
+      await load();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const approvable = rows.filter((r) => r.status === "submitted");
+  const allChecked = approvable.length > 0 && approvable.every((r) => selected.has(r.id));
+
+  function toggleOne(id: number) {
+    setConfirmBulk(false);
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    setConfirmBulk(false);
+    setSelected(allChecked ? new Set() : new Set(approvable.map((r) => r.id)));
+  }
+
+  const [selectingAll, setSelectingAll] = useState(false);
+
+  async function selectAllFiltered() {
+    setError("");
+    setInfo("");
+    setFailures([]);
+    setConfirmBulk(false);
+    setSelectingAll(true);
+    try {
+      const CHUNK = 100;
+      const ids: number[] = [];
+      for (let off = 0; ; off += CHUNK) {
+        const params: Record<string, string | number> = {
+          limit: CHUNK,
+          offset: off,
+          status: "submitted",
+        };
+        if (cycleId) params.cycle_id = cycleId;
+        if (type) params.type = type;
+        if (department.trim()) params.department = department.trim();
+        const res = await client.get("/reports/evaluations", { params });
+        const chunk: { id: number; status: string }[] = res.data.data ?? [];
+        chunk.forEach((r) => {
+          if (r.status === "submitted") ids.push(r.id);
+        });
+        if (chunk.length < CHUNK) break;
+      }
+      setSelected(new Set(ids));
+      setInfo(`เลือกทั้งหมดที่ตรงตัวกรอง ${ids.length} ใบ (ตรวจจำนวนก่อนกดอนุมัติ)`);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSelectingAll(false);
+    }
+  }
+
+  async function approveSelected() {
+    setError("");
+    setInfo("");
+    setFailures([]);
+    setBusy(true);
+    try {
+      const res = await client.post("/evaluations/approve-bulk", { ids: Array.from(selected) });
+      const results: { id: number; ok: boolean; reason?: string }[] = res.data.data?.results ?? [];
+      const bad = results.filter((x) => !x.ok);
+      setInfo(`อนุมัติสำเร็จ ${results.length - bad.length} / ไม่ผ่าน ${bad.length}`);
+      setFailures(bad);
+      setSelected(new Set());
+      setConfirmBulk(false);
       await load();
     } catch (err) {
       setError(errorMessage(err));
@@ -136,10 +222,49 @@ export default function HREvaluationsPage() {
 
       {error && <div className="error-box">{error}</div>}
       {info && <p>{info}</p>}
+      {failures.length > 0 && (
+        <div className="error-box">
+          <div>รายการที่ไม่ผ่าน:</div>
+          {failures.map((f) => (
+            <div key={f.id}>แบบประเมิน #{f.id}: {f.reason}</div>
+          ))}
+        </div>
+      )}
+      <div style={{ margin: "8px 0" }}>
+        <button disabled={busy || selectingAll || loading} onClick={selectAllFiltered}>
+          {selectingAll ? "กำลังดึงรายการ..." : "เลือกทั้งหมดที่ตรงตัวกรอง (ใบที่รออนุมัติ)"}
+        </button>
+      </div>
+
+      {selected.size > 0 && (
+        <div style={{ margin: "8px 0", display: "flex", gap: 8, alignItems: "center" }}>
+          <span>เลือกแล้ว {selected.size} รายการ</span>
+          {!confirmBulk ? (
+            <button className="btn-primary" disabled={busy} onClick={() => setConfirmBulk(true)}>
+              อนุมัติที่เลือก ({selected.size})
+            </button>
+          ) : (
+            <>
+              <strong>ยืนยันอนุมัติ {selected.size} รายการ?</strong>
+              <button className="btn-primary" disabled={busy} onClick={approveSelected}>ยืนยัน</button>
+              <button disabled={busy} onClick={() => setConfirmBulk(false)}>ยกเลิก</button>
+            </>
+          )}
+        </div>
+      )}
 
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ textAlign: "left" }}>
+            <th>
+              <input
+                type="checkbox"
+                checked={allChecked}
+                onChange={toggleAll}
+                disabled={busy || approvable.length === 0}
+                title="เลือกทั้งหมดที่รออนุมัติในหน้านี้"
+              />
+            </th>
             <th>รอบ</th>
             <th>พนักงาน</th>
             <th>แผนก</th>
@@ -153,6 +278,16 @@ export default function HREvaluationsPage() {
         <tbody>
           {rows.map((r) => (
             <tr key={r.id} style={{ borderTop: "1px solid #ddd" }}>
+              <td>
+                {r.status === "submitted" && (
+                  <input
+                    type="checkbox"
+                    checked={selected.has(r.id)}
+                    onChange={() => toggleOne(r.id)}
+                    disabled={busy}
+                  />
+                )}
+              </td>
               <td>{r.cycle_name}</td>
               <td>{r.employee_name}</td>
               <td>{r.department}</td>
@@ -193,11 +328,20 @@ export default function HREvaluationsPage() {
       {loading && <p>กำลังโหลด...</p>}
 
       <div style={{ marginTop: 12, display: "flex", gap: 8, alignItems: "center" }}>
-        <button disabled={offset === 0 || loading} onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}>
+        <button disabled={offset === 0 || loading} onClick={() => setOffset(Math.max(0, offset - pageSize))}>
           ก่อนหน้า
         </button>
-        <span>หน้า {offset / PAGE_SIZE + 1}</span>
-        <button disabled={rows.length < PAGE_SIZE || loading} onClick={() => setOffset(offset + PAGE_SIZE)}>
+        <span>หน้า {offset / pageSize + 1}</span>
+        <select
+          value={pageSize}
+          onChange={(e) => { setPageSize(Number(e.target.value)); setOffset(0); }}
+        >
+          <option value={20}>20 แถว/หน้า</option>
+          <option value={50}>50 แถว/หน้า</option>
+          <option value={100}>100 แถว/หน้า</option>
+          <option value={300}>300 แถว/หน้า</option>
+        </select>
+        <button disabled={rows.length < pageSize || loading} onClick={() => setOffset(offset + pageSize)}>
           ถัดไป
         </button>
       </div>

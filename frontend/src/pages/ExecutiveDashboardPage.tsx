@@ -119,6 +119,15 @@ export default function ExecutiveDashboardPage() {
   const [error, setError] = useState("");
   const [info, setInfo] = useState("");
   const [busy, setBusy] = useState(false);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [confirmBulk, setConfirmBulk] = useState(false);
+  const [bulkNote, setBulkNote] = useState("");
+  const [failures, setFailures] = useState<{ id: number; reason?: string }[]>([]);
+
+  useEffect(() => {
+    setSelected(new Set());
+    setConfirmBulk(false);
+  }, [cycleId, status]);
 
   const loadSummary = useCallback(async () => {
     try {
@@ -154,6 +163,49 @@ export default function ExecutiveDashboardPage() {
   }, [load]);
 
   const cycleName = (id: number) => cycles.find((c) => c.id === id)?.name ?? `รอบ #${id}`;
+
+  const approvable = bonuses.filter((b) => b.status === "pending_approval");
+  const allChecked = approvable.length > 0 && approvable.every((b) => selected.has(b.id));
+
+  function toggleOne(id: number) {
+    setConfirmBulk(false);
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    setConfirmBulk(false);
+    setSelected(allChecked ? new Set() : new Set(approvable.map((b) => b.id)));
+  }
+
+  async function approveSelected() {
+    setError("");
+    setInfo("");
+    setFailures([]);
+    setBusy(true);
+    try {
+      const res = await client.post("/executive/bonuses/approve-bulk", {
+        ids: Array.from(selected),
+        note: bulkNote,
+      });
+      const results: { id: number; ok: boolean; reason?: string }[] = res.data.data?.results ?? [];
+      const bad = results.filter((x) => !x.ok);
+      setInfo(`อนุมัติโบนัสสำเร็จ ${results.length - bad.length} / ไม่ผ่าน ${bad.length}`);
+      setFailures(bad);
+      setSelected(new Set());
+      setConfirmBulk(false);
+      setBulkNote("");
+      await Promise.all([load(), loadSummary()]);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function decide(id: number, action: "approve" | "reject") {
     setError("");
@@ -292,10 +344,48 @@ export default function ExecutiveDashboardPage() {
       </div>
 
       {info && <p>{info}</p>}
+      {failures.length > 0 && (
+        <div className="error-box">
+          <div>รายการที่ไม่ผ่าน:</div>
+          {failures.map((f) => (
+            <div key={f.id}>โบนัส #{f.id}: {f.reason}</div>
+          ))}
+        </div>
+      )}
+      {selected.size > 0 && (
+        <div style={{ margin: "8px 0", display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+          <span>เลือกแล้ว {selected.size} รายการ</span>
+          <input
+            placeholder="หมายเหตุ (ไม่บังคับ)"
+            value={bulkNote}
+            onChange={(e) => setBulkNote(e.target.value)}
+          />
+          {!confirmBulk ? (
+            <button className="btn-primary" disabled={busy} onClick={() => setConfirmBulk(true)}>
+              อนุมัติที่เลือก ({selected.size})
+            </button>
+          ) : (
+            <>
+              <strong>ยืนยันอนุมัติโบนัส {selected.size} รายการ?</strong>
+              <button className="btn-primary" disabled={busy} onClick={approveSelected}>ยืนยัน</button>
+              <button disabled={busy} onClick={() => setConfirmBulk(false)}>ยกเลิก</button>
+            </>
+          )}
+        </div>
+      )}
 
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr style={{ textAlign: "left" }}>
+            <th>
+              <input
+                type="checkbox"
+                checked={allChecked}
+                onChange={toggleAll}
+                disabled={busy || approvable.length === 0}
+                title="เลือกทั้งหมดที่รออนุมัติ"
+              />
+            </th>
             <th>รอบ</th>
             <th>พนักงาน</th>
             <th>เงินเดือน</th>
@@ -309,6 +399,16 @@ export default function ExecutiveDashboardPage() {
         <tbody>
           {bonuses.map((b) => (
             <tr key={b.id} style={{ borderTop: "1px solid #ddd" }}>
+              <td>
+                {b.status === "pending_approval" && (
+                  <input
+                    type="checkbox"
+                    checked={selected.has(b.id)}
+                    onChange={() => toggleOne(b.id)}
+                    disabled={busy}
+                  />
+                )}
+              </td>
               <td>{cycleName(b.cycle_id)}</td>
               <td>พนักงาน #{b.employee_id}</td>
               <td>{money(b.base_salary)}</td>

@@ -340,3 +340,16 @@ func (h *EvaluationHandler) ListPositions(c *gin.Context) {
 	}
 	response.OK(c, out)
 }
+
+// อนุมัติหลายใบพร้อมกัน: วนใช้ Approve เดิมทีละใบ ใบที่ไม่ผ่านไม่ทำให้ใบอื่นล้ม
+func (h *EvaluationHandler) ApproveBulk(c *gin.Context) {
+	var req struct {
+		IDs []uint `json:"ids" binding:"required,min=1,max=500"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.BadRequest(c, err)
+		return
+	}
+	results := h.svc.ApproveMany(req.IDs, middleware.UserID(c), middleware.UserRole(c))
+	response.OK(c, gin.H{"results": results})
+}
