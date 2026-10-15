@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict qBKFhfNFfGXL1zWhGDdlq9q0QCErUcMbkJmJvnTROJpq1ClGfq8saOiLd9fz04J
+\restrict uaHQaqe9CUWob9FlN1TXuTCi7ecG8llU4AV2G0EzKpfVmXIDTTz6b8pxIzGeM3u
 
 -- Dumped from database version 16.15 (Debian 16.15-1.pgdg13+2)
 -- Dumped by pg_dump version 16.15 (Debian 16.15-1.pgdg13+2)
@@ -18,12 +18,98 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+ALTER TABLE IF EXISTS ONLY public.evaluation_scores DROP CONSTRAINT IF EXISTS fk_evaluations_scores;
+DROP INDEX IF EXISTS public.idx_users_manager_id;
+DROP INDEX IF EXISTS public.idx_users_employee_code;
+DROP INDEX IF EXISTS public.idx_users_email;
+DROP INDEX IF EXISTS public.idx_transfer_requests_employee_id;
+DROP INDEX IF EXISTS public.idx_transfer_requests_cycle_id;
+DROP INDEX IF EXISTS public.idx_transfer_evaluation;
+DROP INDEX IF EXISTS public.idx_training_plans_evaluation_id;
+DROP INDEX IF EXISTS public.idx_training_plans_employee_id;
+DROP INDEX IF EXISTS public.idx_task_emp_due;
+DROP INDEX IF EXISTS public.idx_salary_emp_date;
+DROP INDEX IF EXISTS public.idx_promotion_requests_employee_id;
+DROP INDEX IF EXISTS public.idx_promotion_requests_cycle_id;
+DROP INDEX IF EXISTS public.idx_promotion_evaluation;
+DROP INDEX IF EXISTS public.idx_evaluations_evaluator_id;
+DROP INDEX IF EXISTS public.idx_evaluation_scores_evaluation_id;
+DROP INDEX IF EXISTS public.idx_cycle_employee_type;
+DROP INDEX IF EXISTS public.idx_criteria_department;
+DROP INDEX IF EXISTS public.idx_bonus_evaluation_id;
+DROP INDEX IF EXISTS public.idx_bonus_employee_id;
+DROP INDEX IF EXISTS public.idx_bonus_cycle_id;
+DROP INDEX IF EXISTS public.idx_audit_logs_user_id;
+DROP INDEX IF EXISTS public.idx_audit_logs_entity_id;
+ALTER TABLE IF EXISTS ONLY public.users DROP CONSTRAINT IF EXISTS users_pkey;
+ALTER TABLE IF EXISTS ONLY public.transfer_requests DROP CONSTRAINT IF EXISTS transfer_requests_pkey;
+ALTER TABLE IF EXISTS ONLY public.training_plans DROP CONSTRAINT IF EXISTS training_plans_pkey;
+ALTER TABLE IF EXISTS ONLY public.tasks DROP CONSTRAINT IF EXISTS tasks_pkey;
+ALTER TABLE IF EXISTS ONLY public.salary_records DROP CONSTRAINT IF EXISTS salary_records_pkey;
+ALTER TABLE IF EXISTS ONLY public.promotion_requests DROP CONSTRAINT IF EXISTS promotion_requests_pkey;
+ALTER TABLE IF EXISTS ONLY public.positions DROP CONSTRAINT IF EXISTS positions_pkey;
+ALTER TABLE IF EXISTS ONLY public.positions DROP CONSTRAINT IF EXISTS positions_name_key;
+ALTER TABLE IF EXISTS ONLY public.levels DROP CONSTRAINT IF EXISTS levels_pkey;
+ALTER TABLE IF EXISTS ONLY public.levels DROP CONSTRAINT IF EXISTS levels_name_key;
+ALTER TABLE IF EXISTS ONLY public.evaluations DROP CONSTRAINT IF EXISTS evaluations_pkey;
+ALTER TABLE IF EXISTS ONLY public.evaluation_scores DROP CONSTRAINT IF EXISTS evaluation_scores_pkey;
+ALTER TABLE IF EXISTS ONLY public.evaluation_cycles DROP CONSTRAINT IF EXISTS evaluation_cycles_pkey;
+ALTER TABLE IF EXISTS ONLY public.departments DROP CONSTRAINT IF EXISTS departments_pkey;
+ALTER TABLE IF EXISTS ONLY public.departments DROP CONSTRAINT IF EXISTS departments_name_key;
+ALTER TABLE IF EXISTS ONLY public.criteria DROP CONSTRAINT IF EXISTS criteria_pkey;
+ALTER TABLE IF EXISTS ONLY public.bonus DROP CONSTRAINT IF EXISTS bonus_pkey;
+ALTER TABLE IF EXISTS ONLY public.audit_logs DROP CONSTRAINT IF EXISTS audit_logs_pkey;
+ALTER TABLE IF EXISTS public.users ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.transfer_requests ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.training_plans ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.tasks ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.salary_records ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.promotion_requests ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.positions ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.levels ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.evaluations ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.evaluation_scores ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.evaluation_cycles ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.departments ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.criteria ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.bonus ALTER COLUMN id DROP DEFAULT;
+ALTER TABLE IF EXISTS public.audit_logs ALTER COLUMN id DROP DEFAULT;
+DROP SEQUENCE IF EXISTS public.users_id_seq;
+DROP TABLE IF EXISTS public.users;
+DROP SEQUENCE IF EXISTS public.transfer_requests_id_seq;
+DROP TABLE IF EXISTS public.transfer_requests;
+DROP SEQUENCE IF EXISTS public.training_plans_id_seq;
+DROP TABLE IF EXISTS public.training_plans;
+DROP SEQUENCE IF EXISTS public.tasks_id_seq;
+DROP TABLE IF EXISTS public.tasks;
+DROP SEQUENCE IF EXISTS public.salary_records_id_seq;
+DROP TABLE IF EXISTS public.salary_records;
+DROP SEQUENCE IF EXISTS public.promotion_requests_id_seq;
+DROP TABLE IF EXISTS public.promotion_requests;
+DROP SEQUENCE IF EXISTS public.positions_id_seq;
+DROP TABLE IF EXISTS public.positions;
+DROP SEQUENCE IF EXISTS public.levels_id_seq;
+DROP TABLE IF EXISTS public.levels;
+DROP SEQUENCE IF EXISTS public.evaluations_id_seq;
+DROP TABLE IF EXISTS public.evaluations;
+DROP SEQUENCE IF EXISTS public.evaluation_scores_id_seq;
+DROP TABLE IF EXISTS public.evaluation_scores;
+DROP SEQUENCE IF EXISTS public.evaluation_cycles_id_seq;
+DROP TABLE IF EXISTS public.evaluation_cycles;
+DROP SEQUENCE IF EXISTS public.departments_id_seq;
+DROP TABLE IF EXISTS public.departments;
+DROP SEQUENCE IF EXISTS public.criteria_id_seq;
+DROP TABLE IF EXISTS public.criteria;
+DROP SEQUENCE IF EXISTS public.bonus_id_seq;
+DROP TABLE IF EXISTS public.bonus;
+DROP SEQUENCE IF EXISTS public.audit_logs_id_seq;
+DROP TABLE IF EXISTS public.audit_logs;
 SET default_tablespace = '';
 
 SET default_table_access_method = heap;
 
 --
--- Name: audit_logs; Type: TABLE; Schema: public; Owner: postgres
+-- Name: audit_logs; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.audit_logs (
@@ -37,10 +123,8 @@ CREATE TABLE public.audit_logs (
 );
 
 
-ALTER TABLE public.audit_logs OWNER TO postgres;
-
 --
--- Name: audit_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: audit_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.audit_logs_id_seq
@@ -51,17 +135,15 @@ CREATE SEQUENCE public.audit_logs_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.audit_logs_id_seq OWNER TO postgres;
-
 --
--- Name: audit_logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: audit_logs_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.audit_logs_id_seq OWNED BY public.audit_logs.id;
 
 
 --
--- Name: bonus; Type: TABLE; Schema: public; Owner: postgres
+-- Name: bonus; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.bonus (
@@ -87,10 +169,8 @@ CREATE TABLE public.bonus (
 );
 
 
-ALTER TABLE public.bonus OWNER TO postgres;
-
 --
--- Name: bonus_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: bonus_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.bonus_id_seq
@@ -101,17 +181,15 @@ CREATE SEQUENCE public.bonus_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.bonus_id_seq OWNER TO postgres;
-
 --
--- Name: bonus_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: bonus_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.bonus_id_seq OWNED BY public.bonus.id;
 
 
 --
--- Name: criteria; Type: TABLE; Schema: public; Owner: postgres
+-- Name: criteria; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.criteria (
@@ -127,10 +205,8 @@ CREATE TABLE public.criteria (
 );
 
 
-ALTER TABLE public.criteria OWNER TO postgres;
-
 --
--- Name: criteria_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: criteria_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.criteria_id_seq
@@ -141,17 +217,15 @@ CREATE SEQUENCE public.criteria_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.criteria_id_seq OWNER TO postgres;
-
 --
--- Name: criteria_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: criteria_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.criteria_id_seq OWNED BY public.criteria.id;
 
 
 --
--- Name: departments; Type: TABLE; Schema: public; Owner: postgres
+-- Name: departments; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.departments (
@@ -160,10 +234,8 @@ CREATE TABLE public.departments (
 );
 
 
-ALTER TABLE public.departments OWNER TO postgres;
-
 --
--- Name: departments_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: departments_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.departments_id_seq
@@ -175,17 +247,15 @@ CREATE SEQUENCE public.departments_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.departments_id_seq OWNER TO postgres;
-
 --
--- Name: departments_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: departments_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.departments_id_seq OWNED BY public.departments.id;
 
 
 --
--- Name: evaluation_cycles; Type: TABLE; Schema: public; Owner: postgres
+-- Name: evaluation_cycles; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.evaluation_cycles (
@@ -198,10 +268,8 @@ CREATE TABLE public.evaluation_cycles (
 );
 
 
-ALTER TABLE public.evaluation_cycles OWNER TO postgres;
-
 --
--- Name: evaluation_cycles_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: evaluation_cycles_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.evaluation_cycles_id_seq
@@ -212,17 +280,15 @@ CREATE SEQUENCE public.evaluation_cycles_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.evaluation_cycles_id_seq OWNER TO postgres;
-
 --
--- Name: evaluation_cycles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: evaluation_cycles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.evaluation_cycles_id_seq OWNED BY public.evaluation_cycles.id;
 
 
 --
--- Name: evaluation_scores; Type: TABLE; Schema: public; Owner: postgres
+-- Name: evaluation_scores; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.evaluation_scores (
@@ -238,10 +304,8 @@ CREATE TABLE public.evaluation_scores (
 );
 
 
-ALTER TABLE public.evaluation_scores OWNER TO postgres;
-
 --
--- Name: evaluation_scores_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: evaluation_scores_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.evaluation_scores_id_seq
@@ -252,17 +316,15 @@ CREATE SEQUENCE public.evaluation_scores_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.evaluation_scores_id_seq OWNER TO postgres;
-
 --
--- Name: evaluation_scores_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: evaluation_scores_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.evaluation_scores_id_seq OWNED BY public.evaluation_scores.id;
 
 
 --
--- Name: evaluations; Type: TABLE; Schema: public; Owner: postgres
+-- Name: evaluations; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.evaluations (
@@ -283,10 +345,8 @@ CREATE TABLE public.evaluations (
 );
 
 
-ALTER TABLE public.evaluations OWNER TO postgres;
-
 --
--- Name: evaluations_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: evaluations_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.evaluations_id_seq
@@ -297,17 +357,15 @@ CREATE SEQUENCE public.evaluations_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.evaluations_id_seq OWNER TO postgres;
-
 --
--- Name: evaluations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: evaluations_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.evaluations_id_seq OWNED BY public.evaluations.id;
 
 
 --
--- Name: levels; Type: TABLE; Schema: public; Owner: postgres
+-- Name: levels; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.levels (
@@ -317,10 +375,8 @@ CREATE TABLE public.levels (
 );
 
 
-ALTER TABLE public.levels OWNER TO postgres;
-
 --
--- Name: levels_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: levels_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.levels_id_seq
@@ -332,17 +388,15 @@ CREATE SEQUENCE public.levels_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.levels_id_seq OWNER TO postgres;
-
 --
--- Name: levels_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: levels_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.levels_id_seq OWNED BY public.levels.id;
 
 
 --
--- Name: positions; Type: TABLE; Schema: public; Owner: postgres
+-- Name: positions; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.positions (
@@ -351,10 +405,8 @@ CREATE TABLE public.positions (
 );
 
 
-ALTER TABLE public.positions OWNER TO postgres;
-
 --
--- Name: positions_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: positions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.positions_id_seq
@@ -366,17 +418,15 @@ CREATE SEQUENCE public.positions_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.positions_id_seq OWNER TO postgres;
-
 --
--- Name: positions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: positions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.positions_id_seq OWNED BY public.positions.id;
 
 
 --
--- Name: promotion_requests; Type: TABLE; Schema: public; Owner: postgres
+-- Name: promotion_requests; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.promotion_requests (
@@ -399,10 +449,8 @@ CREATE TABLE public.promotion_requests (
 );
 
 
-ALTER TABLE public.promotion_requests OWNER TO postgres;
-
 --
--- Name: promotion_requests_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: promotion_requests_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.promotion_requests_id_seq
@@ -413,17 +461,15 @@ CREATE SEQUENCE public.promotion_requests_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.promotion_requests_id_seq OWNER TO postgres;
-
 --
--- Name: promotion_requests_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: promotion_requests_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.promotion_requests_id_seq OWNED BY public.promotion_requests.id;
 
 
 --
--- Name: salary_records; Type: TABLE; Schema: public; Owner: postgres
+-- Name: salary_records; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.salary_records (
@@ -436,10 +482,8 @@ CREATE TABLE public.salary_records (
 );
 
 
-ALTER TABLE public.salary_records OWNER TO postgres;
-
 --
--- Name: salary_records_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: salary_records_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.salary_records_id_seq
@@ -450,17 +494,15 @@ CREATE SEQUENCE public.salary_records_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.salary_records_id_seq OWNER TO postgres;
-
 --
--- Name: salary_records_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: salary_records_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.salary_records_id_seq OWNED BY public.salary_records.id;
 
 
 --
--- Name: tasks; Type: TABLE; Schema: public; Owner: postgres
+-- Name: tasks; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.tasks (
@@ -476,10 +518,8 @@ CREATE TABLE public.tasks (
 );
 
 
-ALTER TABLE public.tasks OWNER TO postgres;
-
 --
--- Name: tasks_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: tasks_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.tasks_id_seq
@@ -490,17 +530,15 @@ CREATE SEQUENCE public.tasks_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.tasks_id_seq OWNER TO postgres;
-
 --
--- Name: tasks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: tasks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.tasks_id_seq OWNED BY public.tasks.id;
 
 
 --
--- Name: training_plans; Type: TABLE; Schema: public; Owner: postgres
+-- Name: training_plans; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.training_plans (
@@ -518,10 +556,8 @@ CREATE TABLE public.training_plans (
 );
 
 
-ALTER TABLE public.training_plans OWNER TO postgres;
-
 --
--- Name: training_plans_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: training_plans_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.training_plans_id_seq
@@ -532,17 +568,15 @@ CREATE SEQUENCE public.training_plans_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.training_plans_id_seq OWNER TO postgres;
-
 --
--- Name: training_plans_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: training_plans_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.training_plans_id_seq OWNED BY public.training_plans.id;
 
 
 --
--- Name: transfer_requests; Type: TABLE; Schema: public; Owner: postgres
+-- Name: transfer_requests; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.transfer_requests (
@@ -564,10 +598,8 @@ CREATE TABLE public.transfer_requests (
 );
 
 
-ALTER TABLE public.transfer_requests OWNER TO postgres;
-
 --
--- Name: transfer_requests_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: transfer_requests_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.transfer_requests_id_seq
@@ -578,17 +610,15 @@ CREATE SEQUENCE public.transfer_requests_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.transfer_requests_id_seq OWNER TO postgres;
-
 --
--- Name: transfer_requests_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: transfer_requests_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.transfer_requests_id_seq OWNED BY public.transfer_requests.id;
 
 
 --
--- Name: users; Type: TABLE; Schema: public; Owner: postgres
+-- Name: users; Type: TABLE; Schema: public; Owner: -
 --
 
 CREATE TABLE public.users (
@@ -608,10 +638,8 @@ CREATE TABLE public.users (
 );
 
 
-ALTER TABLE public.users OWNER TO postgres;
-
 --
--- Name: users_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+-- Name: users_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
 CREATE SEQUENCE public.users_id_seq
@@ -622,122 +650,120 @@ CREATE SEQUENCE public.users_id_seq
     CACHE 1;
 
 
-ALTER SEQUENCE public.users_id_seq OWNER TO postgres;
-
 --
--- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+-- Name: users_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
 --
 
 ALTER SEQUENCE public.users_id_seq OWNED BY public.users.id;
 
 
 --
--- Name: audit_logs id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: audit_logs id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.audit_logs ALTER COLUMN id SET DEFAULT nextval('public.audit_logs_id_seq'::regclass);
 
 
 --
--- Name: bonus id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: bonus id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.bonus ALTER COLUMN id SET DEFAULT nextval('public.bonus_id_seq'::regclass);
 
 
 --
--- Name: criteria id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: criteria id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.criteria ALTER COLUMN id SET DEFAULT nextval('public.criteria_id_seq'::regclass);
 
 
 --
--- Name: departments id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: departments id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.departments ALTER COLUMN id SET DEFAULT nextval('public.departments_id_seq'::regclass);
 
 
 --
--- Name: evaluation_cycles id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: evaluation_cycles id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.evaluation_cycles ALTER COLUMN id SET DEFAULT nextval('public.evaluation_cycles_id_seq'::regclass);
 
 
 --
--- Name: evaluation_scores id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: evaluation_scores id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.evaluation_scores ALTER COLUMN id SET DEFAULT nextval('public.evaluation_scores_id_seq'::regclass);
 
 
 --
--- Name: evaluations id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: evaluations id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.evaluations ALTER COLUMN id SET DEFAULT nextval('public.evaluations_id_seq'::regclass);
 
 
 --
--- Name: levels id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: levels id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.levels ALTER COLUMN id SET DEFAULT nextval('public.levels_id_seq'::regclass);
 
 
 --
--- Name: positions id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: positions id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.positions ALTER COLUMN id SET DEFAULT nextval('public.positions_id_seq'::regclass);
 
 
 --
--- Name: promotion_requests id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: promotion_requests id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.promotion_requests ALTER COLUMN id SET DEFAULT nextval('public.promotion_requests_id_seq'::regclass);
 
 
 --
--- Name: salary_records id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: salary_records id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.salary_records ALTER COLUMN id SET DEFAULT nextval('public.salary_records_id_seq'::regclass);
 
 
 --
--- Name: tasks id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: tasks id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.tasks ALTER COLUMN id SET DEFAULT nextval('public.tasks_id_seq'::regclass);
 
 
 --
--- Name: training_plans id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: training_plans id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.training_plans ALTER COLUMN id SET DEFAULT nextval('public.training_plans_id_seq'::regclass);
 
 
 --
--- Name: transfer_requests id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: transfer_requests id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.transfer_requests ALTER COLUMN id SET DEFAULT nextval('public.transfer_requests_id_seq'::regclass);
 
 
 --
--- Name: users id; Type: DEFAULT; Schema: public; Owner: postgres
+-- Name: users id; Type: DEFAULT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.users ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
 
 
 --
--- Data for Name: audit_logs; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: audit_logs; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.audit_logs (id, user_id, action, entity, entity_id, detail, created_at) FROM stdin;
@@ -1142,20 +1168,23 @@ COPY public.audit_logs (id, user_id, action, entity, entity_id, detail, created_
 399	4	update	evaluation	1		2026-10-15 04:01:18.38939+00
 400	4	submit	evaluation	1		2026-10-15 04:01:18.486202+00
 401	1	approve	evaluation	1		2026-10-15 04:03:52.87816+00
+402	1	create	bonus	308		2026-10-15 05:55:40.76955+00
+403	2	approve	bonus	308		2026-10-15 05:56:54.204609+00
 \.
 
 
 --
--- Data for Name: bonus; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: bonus; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.bonus (id, evaluation_id, cycle_id, employee_id, base_salary, total_score, suggested_amount, amount, status, note, decision_note, created_by, decided_by, decided_at, created_at, updated_at, paid_by, paid_at, payment_note) FROM stdin;
 1	3	3	27	25000	2.92	12500	12500	paid			1	2	2026-10-15 03:40:23.199043+00	2026-10-15 03:38:40.628691+00	2026-10-15 03:53:19.203628+00	3	2026-10-15 03:53:19.203071+00	
+308	1	3	6	25000	4.69	50000	50000	approved			1	2	2026-10-15 05:56:54.202311+00	2026-10-15 05:55:40.767192+00	2026-10-15 05:56:54.202607+00	\N	\N	
 \.
 
 
 --
--- Data for Name: criteria; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: criteria; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.criteria (id, name, description, weight, is_active, rubric, department, level, source) FROM stdin;
@@ -1177,7 +1206,7 @@ COPY public.criteria (id, name, description, weight, is_active, rubric, departme
 
 
 --
--- Data for Name: departments; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: departments; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.departments (id, name) FROM stdin;
@@ -1190,7 +1219,7 @@ COPY public.departments (id, name) FROM stdin;
 
 
 --
--- Data for Name: evaluation_cycles; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: evaluation_cycles; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.evaluation_cycles (id, name, start_date, end_date, status, created_at) FROM stdin;
@@ -1201,7 +1230,7 @@ COPY public.evaluation_cycles (id, name, start_date, end_date, status, created_a
 
 
 --
--- Data for Name: evaluation_scores; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: evaluation_scores; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.evaluation_scores (id, evaluation_id, criteria_id, score, comment, weight, source, metric, detail) FROM stdin;
@@ -3269,7 +3298,7 @@ COPY public.evaluation_scores (id, evaluation_id, criteria_id, score, comment, w
 
 
 --
--- Data for Name: evaluations; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: evaluations; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.evaluations (id, cycle_id, employee_id, type, evaluator_id, status, total_score, comment, employee_feedback, approved_by, submitted_at, approved_at, created_at, updated_at) FROM stdin;
@@ -3584,7 +3613,7 @@ COPY public.evaluations (id, cycle_id, employee_id, type, evaluator_id, status, 
 
 
 --
--- Data for Name: levels; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: levels; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.levels (id, name, sort_order) FROM stdin;
@@ -3596,7 +3625,7 @@ COPY public.levels (id, name, sort_order) FROM stdin;
 
 
 --
--- Data for Name: positions; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: positions; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.positions (id, name) FROM stdin;
@@ -3614,7 +3643,7 @@ COPY public.positions (id, name) FROM stdin;
 
 
 --
--- Data for Name: promotion_requests; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: promotion_requests; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.promotion_requests (id, evaluation_id, cycle_id, employee_id, from_position, to_position, from_level, to_level, status, note, decision_note, created_by, decided_by, decided_at, created_at, updated_at) FROM stdin;
@@ -3622,7 +3651,7 @@ COPY public.promotion_requests (id, evaluation_id, cycle_id, employee_id, from_p
 
 
 --
--- Data for Name: salary_records; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: salary_records; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.salary_records (id, employee_id, amount, effective_date, created_by, created_at) FROM stdin;
@@ -3956,7 +3985,7 @@ COPY public.salary_records (id, employee_id, amount, effective_date, created_by,
 
 
 --
--- Data for Name: tasks; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: tasks; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.tasks (id, employee_id, title, due_date, completed_at, status, reviewed, revisions, created_at) FROM stdin;
@@ -9764,7 +9793,7 @@ COPY public.tasks (id, employee_id, title, due_date, completed_at, status, revie
 
 
 --
--- Data for Name: training_plans; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: training_plans; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.training_plans (id, evaluation_id, employee_id, topic, reason, start_date, end_date, status, created_by, created_at, updated_at) FROM stdin;
@@ -9772,7 +9801,7 @@ COPY public.training_plans (id, evaluation_id, employee_id, topic, reason, start
 
 
 --
--- Data for Name: transfer_requests; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: transfer_requests; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.transfer_requests (id, evaluation_id, cycle_id, employee_id, from_department, to_department, effective_date, status, note, decision_note, created_by, decided_by, decided_at, created_at, updated_at) FROM stdin;
@@ -9780,7 +9809,7 @@ COPY public.transfer_requests (id, evaluation_id, cycle_id, employee_id, from_de
 
 
 --
--- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: postgres
+-- Data for Name: users; Type: TABLE DATA; Schema: public; Owner: -
 --
 
 COPY public.users (id, employee_code, name, email, password_hash, role, department, "position", manager_id, is_active, created_at, updated_at, level) FROM stdin;
@@ -10114,112 +10143,112 @@ COPY public.users (id, employee_code, name, email, password_hash, role, departme
 
 
 --
--- Name: audit_logs_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: audit_logs_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.audit_logs_id_seq', 401, true);
-
-
---
--- Name: bonus_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
---
-
-SELECT pg_catalog.setval('public.bonus_id_seq', 1, true);
+SELECT pg_catalog.setval('public.audit_logs_id_seq', 403, true);
 
 
 --
--- Name: criteria_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: bonus_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
+--
+
+SELECT pg_catalog.setval('public.bonus_id_seq', 308, true);
+
+
+--
+-- Name: criteria_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
 SELECT pg_catalog.setval('public.criteria_id_seq', 16, true);
 
 
 --
--- Name: departments_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: departments_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
 SELECT pg_catalog.setval('public.departments_id_seq', 7, true);
 
 
 --
--- Name: evaluation_cycles_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: evaluation_cycles_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
 SELECT pg_catalog.setval('public.evaluation_cycles_id_seq', 3, true);
 
 
 --
--- Name: evaluation_scores_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: evaluation_scores_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
 SELECT pg_catalog.setval('public.evaluation_scores_id_seq', 2518, true);
 
 
 --
--- Name: evaluations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: evaluations_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
-SELECT pg_catalog.setval('public.evaluations_id_seq', 370, true);
+SELECT pg_catalog.setval('public.evaluations_id_seq', 676, true);
 
 
 --
--- Name: levels_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: levels_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
 SELECT pg_catalog.setval('public.levels_id_seq', 4, true);
 
 
 --
--- Name: positions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: positions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
 SELECT pg_catalog.setval('public.positions_id_seq', 10, true);
 
 
 --
--- Name: promotion_requests_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: promotion_requests_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
 SELECT pg_catalog.setval('public.promotion_requests_id_seq', 1, false);
 
 
 --
--- Name: salary_records_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: salary_records_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
 SELECT pg_catalog.setval('public.salary_records_id_seq', 326, true);
 
 
 --
--- Name: tasks_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: tasks_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
 SELECT pg_catalog.setval('public.tasks_id_seq', 5800, true);
 
 
 --
--- Name: training_plans_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: training_plans_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
 SELECT pg_catalog.setval('public.training_plans_id_seq', 1, false);
 
 
 --
--- Name: transfer_requests_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: transfer_requests_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
 SELECT pg_catalog.setval('public.transfer_requests_id_seq', 1, false);
 
 
 --
--- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
+-- Name: users_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
 --
 
 SELECT pg_catalog.setval('public.users_id_seq', 326, true);
 
 
 --
--- Name: audit_logs audit_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: audit_logs audit_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.audit_logs
@@ -10227,7 +10256,7 @@ ALTER TABLE ONLY public.audit_logs
 
 
 --
--- Name: bonus bonus_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: bonus bonus_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.bonus
@@ -10235,7 +10264,7 @@ ALTER TABLE ONLY public.bonus
 
 
 --
--- Name: criteria criteria_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: criteria criteria_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.criteria
@@ -10243,7 +10272,7 @@ ALTER TABLE ONLY public.criteria
 
 
 --
--- Name: departments departments_name_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: departments departments_name_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.departments
@@ -10251,7 +10280,7 @@ ALTER TABLE ONLY public.departments
 
 
 --
--- Name: departments departments_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: departments departments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.departments
@@ -10259,7 +10288,7 @@ ALTER TABLE ONLY public.departments
 
 
 --
--- Name: evaluation_cycles evaluation_cycles_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: evaluation_cycles evaluation_cycles_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.evaluation_cycles
@@ -10267,7 +10296,7 @@ ALTER TABLE ONLY public.evaluation_cycles
 
 
 --
--- Name: evaluation_scores evaluation_scores_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: evaluation_scores evaluation_scores_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.evaluation_scores
@@ -10275,7 +10304,7 @@ ALTER TABLE ONLY public.evaluation_scores
 
 
 --
--- Name: evaluations evaluations_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: evaluations evaluations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.evaluations
@@ -10283,7 +10312,7 @@ ALTER TABLE ONLY public.evaluations
 
 
 --
--- Name: levels levels_name_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: levels levels_name_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.levels
@@ -10291,7 +10320,7 @@ ALTER TABLE ONLY public.levels
 
 
 --
--- Name: levels levels_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: levels levels_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.levels
@@ -10299,7 +10328,7 @@ ALTER TABLE ONLY public.levels
 
 
 --
--- Name: positions positions_name_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: positions positions_name_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.positions
@@ -10307,7 +10336,7 @@ ALTER TABLE ONLY public.positions
 
 
 --
--- Name: positions positions_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: positions positions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.positions
@@ -10315,7 +10344,7 @@ ALTER TABLE ONLY public.positions
 
 
 --
--- Name: promotion_requests promotion_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: promotion_requests promotion_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.promotion_requests
@@ -10323,7 +10352,7 @@ ALTER TABLE ONLY public.promotion_requests
 
 
 --
--- Name: salary_records salary_records_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: salary_records salary_records_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.salary_records
@@ -10331,7 +10360,7 @@ ALTER TABLE ONLY public.salary_records
 
 
 --
--- Name: tasks tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: tasks tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.tasks
@@ -10339,7 +10368,7 @@ ALTER TABLE ONLY public.tasks
 
 
 --
--- Name: training_plans training_plans_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: training_plans training_plans_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.training_plans
@@ -10347,7 +10376,7 @@ ALTER TABLE ONLY public.training_plans
 
 
 --
--- Name: transfer_requests transfer_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: transfer_requests transfer_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.transfer_requests
@@ -10355,7 +10384,7 @@ ALTER TABLE ONLY public.transfer_requests
 
 
 --
--- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+-- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.users
@@ -10363,161 +10392,161 @@ ALTER TABLE ONLY public.users
 
 
 --
--- Name: idx_audit_logs_entity_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_audit_logs_entity_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_audit_logs_entity_id ON public.audit_logs USING btree (entity_id);
 
 
 --
--- Name: idx_audit_logs_user_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_audit_logs_user_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_audit_logs_user_id ON public.audit_logs USING btree (user_id);
 
 
 --
--- Name: idx_bonus_cycle_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_bonus_cycle_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_bonus_cycle_id ON public.bonus USING btree (cycle_id);
 
 
 --
--- Name: idx_bonus_employee_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_bonus_employee_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_bonus_employee_id ON public.bonus USING btree (employee_id);
 
 
 --
--- Name: idx_bonus_evaluation_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_bonus_evaluation_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX idx_bonus_evaluation_id ON public.bonus USING btree (evaluation_id);
 
 
 --
--- Name: idx_criteria_department; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_criteria_department; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_criteria_department ON public.criteria USING btree (department);
 
 
 --
--- Name: idx_cycle_employee_type; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_cycle_employee_type; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX idx_cycle_employee_type ON public.evaluations USING btree (cycle_id, employee_id, type);
 
 
 --
--- Name: idx_evaluation_scores_evaluation_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_evaluation_scores_evaluation_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_evaluation_scores_evaluation_id ON public.evaluation_scores USING btree (evaluation_id);
 
 
 --
--- Name: idx_evaluations_evaluator_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_evaluations_evaluator_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_evaluations_evaluator_id ON public.evaluations USING btree (evaluator_id);
 
 
 --
--- Name: idx_promotion_evaluation; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_promotion_evaluation; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX idx_promotion_evaluation ON public.promotion_requests USING btree (evaluation_id);
 
 
 --
--- Name: idx_promotion_requests_cycle_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_promotion_requests_cycle_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_promotion_requests_cycle_id ON public.promotion_requests USING btree (cycle_id);
 
 
 --
--- Name: idx_promotion_requests_employee_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_promotion_requests_employee_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_promotion_requests_employee_id ON public.promotion_requests USING btree (employee_id);
 
 
 --
--- Name: idx_salary_emp_date; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_salary_emp_date; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX idx_salary_emp_date ON public.salary_records USING btree (employee_id, effective_date);
 
 
 --
--- Name: idx_task_emp_due; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_task_emp_due; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_task_emp_due ON public.tasks USING btree (employee_id, due_date);
 
 
 --
--- Name: idx_training_plans_employee_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_training_plans_employee_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_training_plans_employee_id ON public.training_plans USING btree (employee_id);
 
 
 --
--- Name: idx_training_plans_evaluation_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_training_plans_evaluation_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_training_plans_evaluation_id ON public.training_plans USING btree (evaluation_id);
 
 
 --
--- Name: idx_transfer_evaluation; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_transfer_evaluation; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX idx_transfer_evaluation ON public.transfer_requests USING btree (evaluation_id);
 
 
 --
--- Name: idx_transfer_requests_cycle_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_transfer_requests_cycle_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_transfer_requests_cycle_id ON public.transfer_requests USING btree (cycle_id);
 
 
 --
--- Name: idx_transfer_requests_employee_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_transfer_requests_employee_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_transfer_requests_employee_id ON public.transfer_requests USING btree (employee_id);
 
 
 --
--- Name: idx_users_email; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_users_email; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX idx_users_email ON public.users USING btree (email);
 
 
 --
--- Name: idx_users_employee_code; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_users_employee_code; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE UNIQUE INDEX idx_users_employee_code ON public.users USING btree (employee_code);
 
 
 --
--- Name: idx_users_manager_id; Type: INDEX; Schema: public; Owner: postgres
+-- Name: idx_users_manager_id; Type: INDEX; Schema: public; Owner: -
 --
 
 CREATE INDEX idx_users_manager_id ON public.users USING btree (manager_id);
 
 
 --
--- Name: evaluation_scores fk_evaluations_scores; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+-- Name: evaluation_scores fk_evaluations_scores; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.evaluation_scores
@@ -10528,5 +10557,5 @@ ALTER TABLE ONLY public.evaluation_scores
 -- PostgreSQL database dump complete
 --
 
-\unrestrict qBKFhfNFfGXL1zWhGDdlq9q0QCErUcMbkJmJvnTROJpq1ClGfq8saOiLd9fz04J
+\unrestrict uaHQaqe9CUWob9FlN1TXuTCi7ecG8llU4AV2G0EzKpfVmXIDTTz6b8pxIzGeM3u
 
