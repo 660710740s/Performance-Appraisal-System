@@ -408,6 +408,18 @@ func (s *EvaluationService) Submit(id, evaluatorID uint, role domain.Role) (*dom
 	s.evals.CreateAuditLog(&domain.AuditLog{
 		UserID: evaluatorID, Action: "submit", Entity: "evaluation", EntityID: e.ID,
 	})
+	// ใบประเมินตนเองไม่ต้องรออนุมัติ: คะแนนไม่ถูกนำไปคิดโบนัส/เลื่อนตำแหน่ง/โอนย้าย/อบรม
+	if e.Type == domain.EvalTypeSelf {
+		e.Status = domain.EvalStatusApproved
+		e.ApprovedAt = &now
+		if err := s.evals.UpdateEvaluation(e); err != nil {
+			return nil, err
+		}
+		s.evals.CreateAuditLog(&domain.AuditLog{
+			UserID: evaluatorID, Action: "auto_approve", Entity: "evaluation", EntityID: e.ID,
+			Detail: "ใบประเมินตนเองอนุมัติอัตโนมัติเมื่อส่ง",
+		})
+	}
 	return e, nil
 }
 
