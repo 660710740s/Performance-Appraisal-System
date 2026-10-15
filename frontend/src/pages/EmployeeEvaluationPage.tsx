@@ -187,7 +187,7 @@ export default function EmployeeEvaluationPage() {
             <div className="self-eval-criterion-top">
               <div className={`self-eval-criterion-number tone-${index % 5}`}>{String(index + 1).padStart(2, "0")}</div>
               <div className="self-eval-criterion-title-wrap">
-                <h3>{c.name}</h3>
+                <h3>{c.name.replace(/\s*\(อัตโนมัติ\)\s*$/, "")}</h3>
                 {c.description && <p>{c.description}</p>}
               </div>
               <span className="self-eval-weight">น้ำหนัก <strong>{c.weight}</strong></span>

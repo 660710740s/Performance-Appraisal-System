@@ -185,7 +185,7 @@ func (s *EvaluationService) UpdateCriteria(id uint, in UpdateCriteriaInput) (*do
 // เกณฑ์ auto ที่ข้อมูลงานพอ ระบบคำนวณให้เอง ที่เหลือต้องกรอกเอง
 // strict=true (ตอนส่ง) ต้องมีคะแนนครบทุกข้อ / strict=false (ร่าง) เว้นข้อที่ยังไม่กรอกไว้ได้ (Score=0)
 // ใช้ร่วมกันระหว่าง Create, UpdateDraft และ Submit
-func (s *EvaluationService) buildScores(emp *domain.User, cycle *domain.EvaluationCycle, in []ScoreInput, strict bool) ([]domain.EvaluationScore, float64, error) {
+func (s *EvaluationService) buildScores(emp *domain.User, cycle *domain.EvaluationCycle, in []ScoreInput, strict bool, evalType string) ([]domain.EvaluationScore, float64, error) {
 	criteria, err := s.evals.ListCriteriaFor(emp.Department, emp.Level)
 	if err != nil {
 		return nil, 0, err
@@ -212,7 +212,7 @@ func (s *EvaluationService) buildScores(emp *domain.User, cycle *domain.Evaluati
 	}
 
 	var metrics map[string]KpiMetric
-	if hasAuto && s.kpi != nil {
+	if hasAuto && s.kpi != nil && evalType != domain.EvalTypeSelf { // ใบประเมินตนเองกรอกเองทุกข้อ ไม่ใช้คะแนน auto
 		if metrics, err = s.kpi.Compute(emp.ID, cycle, time.Now()); err != nil {
 			return nil, 0, err
 		}
@@ -309,7 +309,7 @@ func (s *EvaluationService) Create(evaluatorID uint, role domain.Role, in Create
 		return nil, domain.ErrConflict
 	}
 
-	scores, total, err := s.buildScores(employee, cycle, in.Scores, false)
+	scores, total, err := s.buildScores(employee, cycle, in.Scores, false, evalType)
 	if err != nil {
 		return nil, err
 	}
@@ -351,7 +351,7 @@ func (s *EvaluationService) UpdateDraft(id, userID uint, in UpdateEvaluationInpu
 	if err != nil {
 		return nil, err
 	}
-	scores, total, err := s.buildScores(emp, cycle, in.Scores, false)
+	scores, total, err := s.buildScores(emp, cycle, in.Scores, false, e.Type)
 	if err != nil {
 		return nil, err
 	}
@@ -390,7 +390,7 @@ func (s *EvaluationService) Submit(id, evaluatorID uint, role domain.Role) (*dom
 	if err != nil {
 		return nil, err
 	}
-	scores, total, err := s.buildScores(emp, cycle, scoreInputsFrom(e.Scores), true)
+	scores, total, err := s.buildScores(emp, cycle, scoreInputsFrom(e.Scores), true, e.Type)
 	if err != nil {
 		return nil, err
 	}
