@@ -12,6 +12,7 @@ func registerAccountingRoutes(authed *gin.RouterGroup, h *AccountingHandler) {
 	g.GET("/salaries", h.ListCurrentSalaries)
 	g.GET("/salaries/:employee_id/history", h.SalaryHistory)
 	g.POST("/salaries", h.SetSalary)
+	g.POST("/bonuses/:id/pay", h.PayBonus)
 
 	// โบนัส: HR เสนอ/แก้ยอด, Accounting + Executive ดูรายการได้
 	bonus := authed.Group("/accounting")

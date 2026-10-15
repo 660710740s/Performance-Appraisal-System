@@ -26,24 +26,20 @@ interface Bonus {
   total_score: number;
   suggested_amount: number;
   amount: number;
-  status: "pending_approval" | "approved" | "rejected";
+  status: "pending_approval" | "approved" | "rejected" | "paid";
+  paid_at: string | null;
+  paid_by: number | null;
+  payment_note: string;
   note: string;
   decision_note: string;
 }
 
 // รูปแบบของ bonus-candidates ยังไม่ได้ตรวจกับ backend จึงรับแบบยืดหยุ่น
-interface Candidate {
-  id?: number;
-  evaluation_id?: number;
-  employee_id: number;
-  employee_name?: string;
-  total_score?: number;
-}
-
-const STATUS_LABEL = {
+const STATUS_LABEL: Record<Bonus["status"], string> = {
   pending_approval: "รอผู้บริหารอนุมัติ",
-  approved: "อนุมัติแล้ว",
+  approved: "อนุมัติแล้ว / รอจ่าย",
   rejected: "ไม่อนุมัติ",
+  paid: "จ่ายแล้ว",
 };
 
 const money = (n: number | null | undefined) =>
@@ -67,12 +63,8 @@ export default function AccountingBonusPage() {
 
   // โบนัส
   const [cycleId, setCycleId] = useState("");
-  const [candidates] = useState<Candidate[]>([]);
   const [bonuses, setBonuses] = useState<Bonus[]>([]);
-  const [candAmount, setCandAmount] = useState<Record<number, string>>({});
-  const [editId, setEditId] = useState<number | null>(null);
-  const [editAmount, setEditAmount] = useState("");
-  const [editNote, setEditNote] = useState("");
+  const [paymentNote, setPaymentNote] = useState<Record<number, string>>({});
 
   const nameOf = (id: number) => salaries.find((s) => s.employee_id === id)?.employee_name ?? `#${id}`;
 
@@ -101,7 +93,7 @@ export default function AccountingBonusPage() {
     if (!cycleId) return;
     try {
       const b = await client.get("/accounting/bonuses", {
-        params: { cycle_id: cycleId, status: "approved" },
+        params: { cycle_id: cycleId },
       });
       setBonuses(b.data.data ?? []);
     } catch (err) {
@@ -163,45 +155,21 @@ export default function AccountingBonusPage() {
     }
   }
 
-  function createBonus(c: Candidate) {
-    const evalId = c.evaluation_id ?? c.id;
-    if (!evalId) return;
-    const raw = candAmount[evalId];
-    const body: Record<string, unknown> = { evaluation_id: evalId };
-    if (raw !== undefined && raw !== "") {
-      const n = Number(raw);
-      if (Number.isNaN(n) || n < 0) {
-        setError("ยอดโบนัสต้องเป็นตัวเลขและไม่ติดลบ");
-        return;
-      }
-      body.amount = n;
-    }
+  function payBonus(b: Bonus) {
+    if (!window.confirm(
+      `ยืนยันบันทึกการจ่ายโบนัสให้ ${nameOf(b.employee_id)} จำนวน ${money(b.amount)} บาท?`
+    )) return;
+
     run(async () => {
-      await client.post("/accounting/bonuses", body);
+      await client.post(`/accounting/bonuses/${b.id}/pay`, {
+        note: paymentNote[b.id] ?? "",
+      });
       await loadBonus();
-    }, "สร้างโบนัสแล้ว ส่งให้ผู้บริหารอนุมัติ");
+    }, "บันทึกการจ่ายโบนัสเรียบร้อยแล้ว");
   }
 
-  function startEdit(b: Bonus) {
-    setError("");
-    setEditId(b.id);
-    setEditAmount(String(b.amount));
-    setEditNote(b.note ?? "");
-  }
-
-  function saveEdit() {
-    const n = Number(editAmount);
-    if (editId === null) return;
-    if (editAmount === "" || Number.isNaN(n) || n < 0) {
-      setError("ยอดโบนัสต้องเป็นตัวเลขและไม่ติดลบ");
-      return;
-    }
-    run(async () => {
-      await client.put(`/accounting/bonuses/${editId}`, { amount: n, note: editNote });
-      setEditId(null);
-      await loadBonus();
-    }, "แก้ยอดโบนัสแล้ว");
-  }
+  const approvedBonuses = bonuses.filter((b) => b.status === "approved");
+  const paidBonuses = bonuses.filter((b) => b.status === "paid");
 
   return (
     <div style={{ maxWidth: 1000 }}>
@@ -280,79 +248,99 @@ export default function AccountingBonusPage() {
         <>
           <label>
             รอบประเมิน{" "}
-            <select value={cycleId} onChange={(e) => { setCycleId(e.target.value); setEditId(null); }}>
+            <select
+              value={cycleId}
+              onChange={(e) => setCycleId(e.target.value)}
+            >
               {cycles.map((c) => (
                 <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
           </label>
 
-          <h3 style={{ marginTop: 20 }}>แบบประเมินที่อนุมัติแล้ว และยังไม่มีโบนัส</h3>
-          {candidates.length === 0 && <p>ไม่มีรายการ</p>}
-          {candidates.map((c) => {
-            const evalId = c.evaluation_id ?? c.id ?? 0;
-            return (
-              <div key={evalId} style={{ margin: "8px 0" }}>
-                {c.employee_name ?? nameOf(c.employee_id)}
-                {c.total_score !== undefined && <> · คะแนน {c.total_score}</>}{" "}
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="ใช้ยอดที่ระบบเสนอ"
-                  value={candAmount[evalId] ?? ""}
-                  onChange={(e) => setCandAmount({ ...candAmount, [evalId]: e.target.value })}
-                  style={{ width: 160 }}
-                />{" "}
-                <button disabled={busy} onClick={() => createBonus(c)}>สร้างโบนัส</button>
-              </div>
-            );
-          })}
+          <h3 style={{ marginTop: 24 }}>
+            รอจ่ายโบนัส ({approvedBonuses.length} รายการ)
+          </h3>
+          <p>แสดงเฉพาะโบนัสที่ผู้บริหารอนุมัติแล้ว</p>
 
-          <h3 style={{ marginTop: 24 }}>โบนัสของรอบนี้</h3>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ textAlign: "left" }}>
                 <th>พนักงาน</th>
-                <th>เงินเดือน ณ ตอนนั้น</th>
-                <th>คะแนน</th>
-                <th>ยอดที่ระบบเสนอ</th>
-                <th>ยอดที่ยืนยัน</th>
-                <th>สถานะ</th>
-                <th></th>
+                <th>คะแนน KPI</th>
+                <th>เงินเดือนฐาน</th>
+                <th>ยอดโบนัส</th>
+                <th>บันทึกการจ่าย</th>
               </tr>
             </thead>
             <tbody>
-              {bonuses.map((b) => (
+              {approvedBonuses.map((b) => (
                 <tr key={b.id} style={{ borderTop: "1px solid #ddd" }}>
                   <td>{nameOf(b.employee_id)}</td>
-                  <td>{money(b.base_salary)}</td>
                   <td>{b.total_score}</td>
-                  <td>{money(b.suggested_amount)}</td>
-                  <td>{money(b.amount)}</td>
+                  <td>{money(b.base_salary)} บาท</td>
+                  <td>{money(b.amount)} บาท</td>
                   <td>
-                    {STATUS_LABEL[b.status]}
-                    {b.decision_note && <div><small>{b.decision_note}</small></div>}
-                  </td>
-                  <td>
-                    {b.status === "pending_approval" && (
-                      <button disabled={busy} onClick={() => startEdit(b)}>แก้ยอด</button>
-                    )}
-                    {editId === b.id && (
-                      <div style={{ marginTop: 6, display: "grid", gap: 6 }}>
-                        <input type="number" min="0" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} />
-                        <input placeholder="หมายเหตุ" value={editNote} onChange={(e) => setEditNote(e.target.value)} />
-                        <div>
-                          <button disabled={busy} onClick={saveEdit}>บันทึก</button>{" "}
-                          <button onClick={() => setEditId(null)}>ยกเลิก</button>
-                        </div>
-                      </div>
-                    )}
+                    <input
+                      placeholder="หมายเหตุการจ่าย (ไม่บังคับ)"
+                      value={paymentNote[b.id] ?? ""}
+                      onChange={(e) =>
+                        setPaymentNote((prev) => ({
+                          ...prev,
+                          [b.id]: e.target.value,
+                        }))
+                      }
+                    />
+                    {" "}
+                    <button
+                      className="btn-primary"
+                      disabled={busy}
+                      onClick={() => payBonus(b)}
+                    >
+                      ยืนยันการจ่าย
+                    </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {bonuses.length === 0 && <p>ยังไม่มีโบนัสในรอบนี้</p>}
+
+          {approvedBonuses.length === 0 && (
+            <p>ไม่มีโบนัสที่รอจ่ายในรอบนี้</p>
+          )}
+
+          <h3 style={{ marginTop: 32 }}>
+            ประวัติการจ่ายโบนัส ({paidBonuses.length} รายการ)
+          </h3>
+
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ textAlign: "left" }}>
+                <th>พนักงาน</th>
+                <th>ยอดโบนัส</th>
+                <th>วันที่บันทึกจ่าย</th>
+                <th>ผู้บันทึก (ID)</th>
+                <th>หมายเหตุ</th>
+                <th>สถานะ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {paidBonuses.map((b) => (
+                <tr key={b.id} style={{ borderTop: "1px solid #ddd" }}>
+                  <td>{nameOf(b.employee_id)}</td>
+                  <td>{money(b.amount)} บาท</td>
+                  <td>{b.paid_at ? new Date(b.paid_at).toLocaleString("th-TH") : "-"}</td>
+                  <td>{b.paid_by ?? "-"}</td>
+                  <td>{b.payment_note || "-"}</td>
+                  <td>{STATUS_LABEL[b.status]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          {paidBonuses.length === 0 && (
+            <p>ยังไม่มีประวัติการจ่ายโบนัสในรอบนี้</p>
+          )}
         </>
       )}
     </div>

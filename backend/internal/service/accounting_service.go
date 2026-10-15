@@ -300,3 +300,21 @@ func (s *AccountingService) ApproveManyBonuses(by uint, ids []uint, note string)
 	}
 	return results
 }
+
+// PayBonus บันทึกการจ่ายเฉพาะโบนัสที่ผู้บริหารอนุมัติแล้ว
+func (s *AccountingService) PayBonus(
+	by, id uint,
+	note string,
+) (*domain.Bonus, error) {
+	now := time.Now()
+
+	updated, err := s.acc.MarkBonusPaid(id, by, now, note)
+	if err != nil {
+		return nil, err
+	}
+	if !updated {
+		return nil, domain.ErrNotFound
+	}
+
+	return s.acc.GetBonus(id)
+}

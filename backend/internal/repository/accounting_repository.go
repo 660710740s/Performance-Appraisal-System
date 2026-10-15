@@ -103,3 +103,25 @@ func (r *accountingRepository) ListApprovedWithoutBonus(cycleID uint) ([]domain.
 		Order("id").Find(&out).Error
 	return out, err
 }
+
+func (r *accountingRepository) MarkBonusPaid(
+	id uint,
+	paidBy uint,
+	paidAt time.Time,
+	note string,
+) (bool, error) {
+	result := r.db.Model(&domain.Bonus{}).
+		Where("id = ? AND status = ?", id, domain.BonusStatusApproved).
+		Updates(map[string]interface{}{
+			"status":       domain.BonusStatusPaid,
+			"paid_by":      paidBy,
+			"paid_at":      paidAt,
+			"payment_note": note,
+		})
+
+	if result.Error != nil {
+		return false, result.Error
+	}
+
+	return result.RowsAffected == 1, nil
+}

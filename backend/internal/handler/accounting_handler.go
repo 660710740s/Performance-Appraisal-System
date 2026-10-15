@@ -232,3 +232,30 @@ func (h *AccountingHandler) ApproveBulk(c *gin.Context) {
 	results := h.svc.ApproveManyBonuses(middleware.UserID(c), req.IDs, req.Note)
 	response.OK(c, gin.H{"results": results})
 }
+
+type payBonusRequest struct {
+	Note string `json:"note"`
+}
+
+// PayBonus บันทึกจ่ายโบนัสโดย Accounting
+func (h *AccountingHandler) PayBonus(c *gin.Context) {
+	id, ok := parseIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	var req payBonusRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	by := middleware.UserID(c)
+	out, err := h.svc.PayBonus(by, id, req.Note)
+	if err != nil {
+		response.Error(c, err)
+		return
+	}
+
+	response.OK(c, out)
+}

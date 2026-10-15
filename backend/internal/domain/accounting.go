@@ -6,6 +6,7 @@ const (
 	BonusStatusPending  = "pending_approval"
 	BonusStatusApproved = "approved"
 	BonusStatusRejected = "rejected"
+	BonusStatusPaid     = "paid"
 )
 
 // ประวัติเงินเดือน: 1 แถว = 1 การเปลี่ยนแปลง (มีวันที่มีผล)
@@ -36,6 +37,9 @@ type Bonus struct {
 	DecidedAt       *time.Time `json:"decided_at"`
 	CreatedAt       time.Time  `json:"created_at"`
 	UpdatedAt       time.Time  `json:"updated_at"`
+	PaidBy          *uint      `json:"paid_by"`
+	PaidAt          *time.Time `json:"paid_at"`
+	PaymentNote     string     `json:"payment_note"`
 }
 
 // ผลลัพธ์ query รายการเงินเดือนปัจจุบัน (Amount เป็น nil ถ้ายังไม่เคยตั้ง)
@@ -52,6 +56,7 @@ type AccountingRepository interface {
 	ListSalaryHistory(employeeID uint) ([]SalaryRecord, error)
 	ListCurrentSalaries() ([]CurrentSalary, error)
 
+	MarkBonusPaid(id uint, paidBy uint, paidAt time.Time, note string) (bool, error)
 	CreateBonus(b *Bonus) error
 	GetBonus(id uint) (*Bonus, error)
 	GetBonusByEvaluation(evaluationID uint) (*Bonus, error)
